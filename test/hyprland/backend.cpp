@@ -4,8 +4,10 @@
 #else
 #include <catch2/catch.hpp>
 #endif
+#include <fakeit.hpp>
 
 #include "fixtures/IPCTestFixture.hpp"
+#include "mocks/mocksystemcalls.hpp"
 #include "modules/hyprland/backend.hpp"
 
 namespace fs = std::filesystem;
@@ -52,4 +54,46 @@ TEST_CASE_METHOD(IPCTestFixture, "XDGRuntimeDirExistsNoHyprDir", "[getSocketFold
 
   // Assert expected result
   REQUIRE(actualPath == expectedPath);
+}
+
+TEST_CASE("IPC::getSocket1Reply - Successful execution") {
+  MockSystemCalls mockSystemCalls;
+
+  std::string rq = "request";
+  std::string expectedResponse = "response";
+
+  When(Method(mockSystemCalls.mock, socket).Using(AF_UNIX, SOCK_STREAM, 0)).Return(3);
+
+  When(Method(mockSystemCalls.mock, getaddrinfo).Using("localhost", nullptr, _, _)).Return(0);
+
+  When(Method(mockSystemCalls.mock, getenv).Using("HYPRLAND_INSTANCE_SIGNATURE"))
+      .Return((char*)"signature");
+
+  When(Method(mockSystemCalls.mock, snprintf).Using(_, _, _, _)).Return(0);
+
+  When(Method(mockSystemCalls.mock, connect).Using(3, _, sizeof(sockaddr_un))).Return(0);
+
+  When(Method(mockSystemCalls.mock, write).Using(3, rq.c_str(), rq.length())).Return(rq.length());
+
+  When(Method(mockSystemCalls.mock, read).Using(3, _, 8192))
+      .Return(expectedResponse.length())
+      .Then(Do([&expectedResponse](int, void* buf, size_t) -> ssize_t {
+        std::memcpy(buf, expectedResponse.c_str(), expectedResponse.length());
+        return expectedResponse.length();
+      }))
+      .AlwaysReturn(0);
+
+  When(Method(mockSystemCalls.mock, close).Using(3)).Return(0);
+
+  auto result = IPCTestFixture::getSocket1Reply(rq);
+  REQUIRE(result == expectedResponse);
+}
+
+TEST_CASE("IPC::getSocket1Reply - Socket creation failure") {
+  MockSystemCalls mockSystemCalls;
+
+  When(Method(mockSystemCalls.mock, socket).Using(AF_UNIX, SOCK_STREAM, 0)).Return(-1);
+
+  auto result = IPCTestFixture::getSocket1Reply("request");
+  REQUIRE(result.empty());
 }
