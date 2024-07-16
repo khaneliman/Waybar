@@ -14,6 +14,10 @@ Scratchpad::Scratchpad(const std::string& id, const Json::Value& config)
       tooltip_enabled_(config_["tooltip"].isBool() ? config_["tooltip"].asBool() : true),
       tooltip_text_(""),
       count_(0) {
+  if (!ipcReady_) {
+    return;
+  }
+
   ipc_.subscribe(R"(["window"])");
   ipc_.signal_event.connect(sigc::mem_fun(*this, &Scratchpad::onEvent));
   ipc_.signal_cmd.connect(sigc::mem_fun(*this, &Scratchpad::onCmd));

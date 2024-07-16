@@ -11,16 +11,18 @@ namespace waybar::modules::sway {
 // Helper function to assign a number to a workspace, just like sway. In fact
 // this is taken quite verbatim from `sway/ipc-json.c`.
 int Workspaces::convertWorkspaceNameToNum(std::string name) {
-  if (isdigit(name[0])) {
+  if (isdigit(name[0]) != 0) {
     errno = 0;
-    char *endptr = NULL;
+    char *endptr = nullptr;
     long long parsed_num = strtoll(name.c_str(), &endptr, 10);
+
     if (errno != 0 || parsed_num > INT32_MAX || parsed_num < 0 || endptr == name.c_str()) {
       return -1;
-    } else {
-      return (int)parsed_num;
     }
+
+    return (int)parsed_num;
   }
+
   return -1;
 }
 
@@ -46,8 +48,12 @@ Workspaces::Workspaces(const std::string &id, const Bar &bar, const Json::Value 
     : AModule(config, "workspaces", id, false, !config["disable-scroll"].asBool()),
       bar_(bar),
       box_(bar.orientation, 0) {
+  if (!ipcReady_) {
+    return;
+  }
+
   if (config["format-icons"]["high-priority-named"].isArray()) {
-    for (auto &it : config["format-icons"]["high-priority-named"]) {
+    for (const auto &it : config["format-icons"]["high-priority-named"]) {
       high_priority_named_.push_back(it.asString());
     }
   }
@@ -422,7 +428,7 @@ std::string Workspaces::getIcon(const std::string &name, const Json::Value &node
 }
 
 bool Workspaces::handleScroll(GdkEventScroll *e) {
-  if (gdk_event_get_pointer_emulated((GdkEvent *)e)) {
+  if (gdk_event_get_pointer_emulated((GdkEvent *)e) != 0) {
     /**
      * Ignore emulated scroll events on window
      */

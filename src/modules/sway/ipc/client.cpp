@@ -11,6 +11,7 @@ Ipc::Ipc() {
   const std::string& socketPath = getSocketPath();
   fd_ = open(socketPath);
   fd_event_ = open(socketPath);
+  ipcReady_ = true;
 }
 
 Ipc::~Ipc() {

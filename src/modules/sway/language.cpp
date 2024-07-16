@@ -30,6 +30,11 @@ Language::Language(const std::string& id, const Json::Value& config)
   if (config.isMember("tooltip-format")) {
     tooltip_format_ = config["tooltip-format"].asString();
   }
+
+  if (!ipcReady_) {
+    return;
+  }
+
   ipc_.subscribe(R"(["input"])");
   ipc_.signal_event.connect(sigc::mem_fun(*this, &Language::onEvent));
   ipc_.signal_cmd.connect(sigc::mem_fun(*this, &Language::onCmd));

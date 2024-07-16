@@ -50,4 +50,5 @@ class Ipc {
   util::SleeperThread thread_;
 };
 
+inline bool ipcReady_ = false;
 }  // namespace waybar::modules::sway

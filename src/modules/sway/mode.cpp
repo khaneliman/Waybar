@@ -6,6 +6,10 @@ namespace waybar::modules::sway {
 
 Mode::Mode(const std::string& id, const Json::Value& config)
     : ALabel(config, "mode", id, "{}", 0, true) {
+  if (!ipcReady_) {
+    return;
+  }
+
   ipc_.subscribe(R"(["mode"])");
   ipc_.signal_event.connect(sigc::mem_fun(*this, &Mode::onEvent));
   // Launch worker
