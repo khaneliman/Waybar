@@ -17,6 +17,10 @@ Language::Language(const std::string& id, const Bar& bar, const Json::Value& con
     gIPC = std::make_unique<IPC>();
   }
 
+  if (!ipcReady) {
+    return;
+  }
+
   // get the active layout when open
   initLanguage();
 

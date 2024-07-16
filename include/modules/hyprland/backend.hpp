@@ -42,4 +42,5 @@ class IPC {
 
 inline std::unique_ptr<IPC> gIPC;
 inline bool modulesReady = false;
+inline bool ipcReady = false;
 };  // namespace waybar::modules::hyprland

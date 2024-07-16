@@ -17,16 +17,20 @@ Workspaces::Workspaces(const std::string &id, const Bar &bar, const Json::Value 
   modulesReady = true;
   parseConfig(config);
 
+  if (!gIPC) {
+    gIPC = std::make_unique<IPC>();
+  }
+
+  if (!ipcReady) {
+    return;
+  }
+
   m_box.set_name("workspaces");
   if (!id.empty()) {
     m_box.get_style_context()->add_class(id);
   }
   m_box.get_style_context()->add_class(MODULE_CLASS);
   event_box_.add(m_box);
-
-  if (!gIPC) {
-    gIPC = std::make_unique<IPC>();
-  }
 
   setCurrentMonitorId();
   init();

@@ -16,6 +16,10 @@ Submap::Submap(const std::string& id, const Bar& bar, const Json::Value& config)
     gIPC = std::make_unique<IPC>();
   }
 
+  if (!ipcReady) {
+    return;
+  }
+
   label_.hide();
   ALabel::update();
 

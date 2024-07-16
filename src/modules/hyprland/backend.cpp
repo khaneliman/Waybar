@@ -79,6 +79,7 @@ void IPC::startIPC() {
       return;
     }
 
+    ipcReady = true;
     auto* file = fdopen(socketfd, "r");
 
     while (true) {
