@@ -16,9 +16,9 @@ enum class WS { LEFT, RIGHT, HIDDEN };
 class Clock final : public ALabel {
  public:
   Clock(const std::string&, const Json::Value&);
-  virtual ~Clock() = default;
+  ~Clock() override = default;
   auto update() -> void override;
-  auto doAction(const std::string&) -> void override;
+  auto doAction(const std::string& /*name*/) -> void override;
 
  private:
   const std::locale m_locale_;
@@ -52,10 +52,10 @@ class Clock final : public ALabel {
   std::string cldText_{""};      // calendar text to print
   CldMode cldMode_{CldMode::MONTH};
   auto get_calendar(const year_month_day& today, const year_month_day& ymd, const time_zone* tz)
-      -> const std::string;
+      -> std::string;
 
   // get local time zone
-  auto local_zone() -> const time_zone*;
+  static auto local_zone() -> const time_zone*;
 
   // time zoned time in tooltip
   const bool tzInTooltip_;                // if need to print time zones text
@@ -67,7 +67,7 @@ class Clock final : public ALabel {
   // ordinal date in tooltip
   const bool ordInTooltip_;
   std::string ordText_{""};
-  auto get_ordinal_date(const year_month_day& today) -> std::string;
+  static auto get_ordinal_date(const year_month_day& today) -> std::string;
 
   auto getTZtext(sys_seconds now) -> std::string;
   auto first_day_of_week() -> weekday;

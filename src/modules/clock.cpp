@@ -53,7 +53,7 @@ waybar::modules::Clock::Clock(const std::string& id, const Json::Value& config)
         spdlog::warn("Timezone: {0}. {1}", config_["timezone"].asString(), e.what());
       }
   }
-  if (!tzList_.size()) tzList_.push_back(nullptr);
+  if (tzList_.empty()) tzList_.push_back(nullptr);
 
   // Calendar properties
   if (cldInTooltip_) {
@@ -108,12 +108,12 @@ waybar::modules::Clock::Clock(const std::string& id, const Json::Value& config)
     }
     if (config_[kCldPlaceholder]["mode-mon-col"].isInt()) {
       cldMonCols_ = config_[kCldPlaceholder]["mode-mon-col"].asInt();
-      if (cldMonCols_ == 0u || (12 % cldMonCols_) != 0u) {
+      if (cldMonCols_ == 0U || (12 % cldMonCols_) != 0U) {
         spdlog::warn(
             "Clock calendar configuration mode-mon-col = {0} must be one of [1, 2, 3, 4, 6, 12]. "
             "Value 3 is using instead",
             cldMonCols_);
-        cldMonCols_ = 3u;
+        cldMonCols_ = 3U;
       }
     } else
       cldMonCols_ = 1;
@@ -138,7 +138,7 @@ waybar::modules::Clock::Clock(const std::string& id, const Json::Value& config)
   };
 }
 
-bool waybar::modules::Clock::query_tlp_cb(int, int, bool,
+bool waybar::modules::Clock::query_tlp_cb(int /*unused*/, int /*unused*/, bool /*unused*/,
                                           const Glib::RefPtr<Gtk::Tooltip>& tooltip) {
   tooltip->set_custom(*m_tooltip_.get());
   return true;
@@ -194,8 +194,8 @@ auto waybar::modules::Clock::getTZtext(sys_seconds now) -> std::string {
   return os.str();
 }
 
-const unsigned cldRowsInMonth(const year_month& ym, const weekday& firstdow) {
-  return 2u + ceil<weeks>((weekday{ym / 1} - firstdow) + ((ym / last).day() - day{0})).count();
+unsigned cldRowsInMonth(const year_month& ym, const weekday& firstdow) {
+  return 2U + ceil<weeks>((weekday{ym / 1} - firstdow) + ((ym / last).day() - day{0})).count();
 }
 
 auto cldGetWeekForLine(const year_month& ym, const weekday& firstdow, const unsigned line)
@@ -289,7 +289,7 @@ auto getCalendarLine(const year_month_day& currDate, const year_month ym, const 
 }
 
 auto waybar::modules::Clock::get_calendar(const year_month_day& today, const year_month_day& ymd,
-                                          const time_zone* tz) -> const std::string {
+                                          const time_zone* tz) -> std::string {
   const auto firstdow{first_day_of_week()};
   const auto maxRows{12 / cldMonCols_};
   const auto ym{ymd.year() / ymd.month()};
@@ -301,7 +301,7 @@ auto waybar::modules::Clock::get_calendar(const year_month_day& today, const yea
 
   if (cldMode_ == CldMode::YEAR) {
     if (y / month{1} / 1 == cldYearShift_)
-      if (d == cldBaseDay_ || (uint)cldBaseDay_ == 0u)
+      if (d == cldBaseDay_ || (uint)cldBaseDay_ == 0U)
         return cldYearCached_;
       else
         cldBaseDay_ = d;
@@ -310,7 +310,7 @@ auto waybar::modules::Clock::get_calendar(const year_month_day& today, const yea
   }
   if (cldMode_ == CldMode::MONTH) {
     if (ym == cldMonShift_)
-      if (d == cldBaseDay_ || (uint)cldBaseDay_ == 0u)
+      if (d == cldBaseDay_ || (uint)cldBaseDay_ == 0U)
         return cldMonCached_;
       else
         cldBaseDay_ = d;
@@ -320,20 +320,19 @@ auto waybar::modules::Clock::get_calendar(const year_month_day& today, const yea
   // Pad object
   const std::string pads(cldWnLen_, ' ');
   // Compute number of lines needed for each calendar month
-  unsigned ml[12]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-
+  std::array<unsigned, 12> ml{{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
   for (auto& m : ml) {
     if (cldMode_ == CldMode::YEAR || m == static_cast<unsigned>(ymd.month()))
       m = cldRowsInMonth(y / month{m}, firstdow);
     else
-      m = 0u;
+      m = 0U;
   }
 
-  for (auto row{0u}; row < maxRows; ++row) {
+  for (auto row{0U}; row < maxRows; ++row) {
     const auto lines{*std::max_element(std::begin(ml) + (row * cldMonCols_),
                                        std::begin(ml) + ((row + 1) * cldMonCols_))};
-    for (auto line{0u}; line < lines; ++line) {
-      for (auto col{0u}; col < cldMonCols_; ++col) {
+    for (auto line{0U}; line < lines; ++line) {
+      for (auto col{0U}; col < cldMonCols_; ++col) {
         const auto mon{month{row * cldMonCols_ + col + 1}};
         if (cldMode_ == CldMode::YEAR || y / mon == ym) {
           const year_month ymTmp{y / mon};
@@ -342,7 +341,7 @@ auto waybar::modules::Clock::get_calendar(const year_month_day& today, const yea
           // Week numbers on the left
           if (cldWPos_ == WS::LEFT && line > 0) {
             if (line > 1) {
-              if (line < ml[(unsigned)ymTmp.month() - 1u]) {
+              if (line < ml[(unsigned)ymTmp.month() - 1U]) {
                 os << fmt_lib::vformat(
                           m_locale_, fmtMap_[4],
                           fmt_lib::make_format_args(
@@ -365,7 +364,7 @@ auto waybar::modules::Clock::get_calendar(const year_month_day& today, const yea
           // Week numbers on the right
           if (cldWPos_ == WS::RIGHT && line > 0) {
             if (line > 1) {
-              if (line < ml[(unsigned)ymTmp.month() - 1u])
+              if (line < ml[(unsigned)ymTmp.month() - 1U])
                 os << ' '
                    << fmt_lib::vformat(
                           m_locale_, fmtMap_[4],
@@ -390,9 +389,9 @@ auto waybar::modules::Clock::get_calendar(const year_month_day& today, const yea
         tmp << os.str();
       // Clear ostringstream
       std::ostringstream().swap(os);
-      if (line + 1u != lines || (row + 1u != maxRows && cldMode_ == CldMode::YEAR)) tmp << '\n';
+      if (line + 1U != lines || (row + 1U != maxRows && cldMode_ == CldMode::YEAR)) tmp << '\n';
     }
-    if (row + 1u != maxRows && cldMode_ == CldMode::YEAR) tmp << '\n';
+    if (row + 1U != maxRows && cldMode_ == CldMode::YEAR) tmp << '\n';
   }
 
   os << std::regex_replace(
@@ -413,7 +412,7 @@ auto waybar::modules::Clock::get_calendar(const year_month_day& today, const yea
 
 auto waybar::modules::Clock::local_zone() -> const time_zone* {
   const char* tz_name = getenv("TZ");
-  if (tz_name) {
+  if (tz_name != nullptr) {
     try {
       return locate_zone(tz_name);
     } catch (const std::runtime_error& e) {
@@ -425,7 +424,7 @@ auto waybar::modules::Clock::local_zone() -> const time_zone* {
 
 // Actions handler
 auto waybar::modules::Clock::doAction(const std::string& name) -> void {
-  if (actionMap_[name]) {
+  if (actionMap_[name] != nullptr) {
     (this->*actionMap_[name])();
   } else
     spdlog::error("Clock. Unsupported action \"{0}\"", name);
@@ -445,7 +444,7 @@ void waybar::modules::Clock::cldShift_reset() { cldCurrShift_ = (months)0; }
 void waybar::modules::Clock::tz_up() {
   const auto tzSize{tzList_.size()};
   if (tzSize == 1) return;
-  size_t newIdx{tzCurrIdx_ + 1lu};
+  size_t newIdx{tzCurrIdx_ + 1LU};
   tzCurrIdx_ = (newIdx == tzSize) ? 0 : newIdx;
 }
 void waybar::modules::Clock::tz_down() {
@@ -465,7 +464,7 @@ using deleting_unique_ptr = std::unique_ptr<T, deleter_from_fn<fn>>;
 // Computations done similarly to Linux cal utility.
 auto waybar::modules::Clock::first_day_of_week() -> weekday {
 #ifdef HAVE_LANGINFO_1STDAY
-  deleting_unique_ptr<std::remove_pointer<locale_t>::type, freelocale> posix_locale{
+  deleting_unique_ptr<std::remove_pointer_t<locale_t>, freelocale> posix_locale{
       newlocale(LC_ALL, m_locale_.name().c_str(), nullptr)};
   if (posix_locale) {
     const auto i{(int)((std::intptr_t)nl_langinfo_l(_NL_TIME_WEEK_1STDAY, posix_locale.get()))};
