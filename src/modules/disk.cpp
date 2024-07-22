@@ -1,5 +1,7 @@
 #include "modules/disk.hpp"
 
+#include "util/format.hpp"
+
 using namespace waybar::util;
 
 waybar::modules::Disk::Disk(const std::string& id, const Json::Value& config)
@@ -46,7 +48,10 @@ auto waybar::modules::Disk::update() -> void {
     return;
   }
 
-  float specific_free, specific_used, specific_total, divisor;
+  float specific_free;
+  float specific_used;
+  float specific_total;
+  float divisor;
 
   divisor = calc_specific_divisor(unit_);
   specific_free = (stats.f_bavail * stats.f_frsize) / divisor;
@@ -92,24 +97,30 @@ auto waybar::modules::Disk::update() -> void {
   ALabel::update();
 }
 
-float waybar::modules::Disk::calc_specific_divisor(std::string divisor) {
+float waybar::modules::Disk::calc_specific_divisor(const std::string& divisor) {
   if (divisor == "kB") {
     return 1000.0;
-  } else if (divisor == "kiB") {
-    return 1024.0;
-  } else if (divisor == "MB") {
-    return 1000.0 * 1000.0;
-  } else if (divisor == "MiB") {
-    return 1024.0 * 1024.0;
-  } else if (divisor == "GB") {
-    return 1000.0 * 1000.0 * 1000.0;
-  } else if (divisor == "GiB") {
-    return 1024.0 * 1024.0 * 1024.0;
-  } else if (divisor == "TB") {
-    return 1000.0 * 1000.0 * 1000.0 * 1000.0;
-  } else if (divisor == "TiB") {
-    return 1024.0 * 1024.0 * 1024.0 * 1024.0;
-  } else {  // default to Bytes if it is anything that we don't recongnise
-    return 1.0;
   }
+  if (divisor == "kiB") {
+    return 1024.0;
+  }
+  if (divisor == "MB") {
+    return 1000.0 * 1000.0;
+  }
+  if (divisor == "MiB") {
+    return 1024.0 * 1024.0;
+  }
+  if (divisor == "GB") {
+    return 1000.0 * 1000.0 * 1000.0;
+  }
+  if (divisor == "GiB") {
+    return 1024.0 * 1024.0 * 1024.0;
+  }
+  if (divisor == "TB") {
+    return 1000.0 * 1000.0 * 1000.0 * 1000.0;
+  }
+  if (divisor == "TiB") {
+    return 1024.0 * 1024.0 * 1024.0 * 1024.0;
+  }  // default to Bytes if it is anything that we don't recongnise
+  return 1.0;
 }
