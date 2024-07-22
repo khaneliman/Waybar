@@ -12,9 +12,9 @@ namespace waybar::modules {
 class Inhibitor : public ALabel {
  public:
   Inhibitor(const std::string&, const waybar::Bar&, const Json::Value&);
-  virtual ~Inhibitor();
+  ~Inhibitor() override;
   auto update() -> void override;
-  auto activated() -> bool;
+  auto activated() const -> bool;
 
  private:
   auto handleToggle(::GdkEventButton* const& e) -> bool override;

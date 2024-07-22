@@ -10,9 +10,9 @@ using DBus = std::unique_ptr<GDBusConnection, void (*)(GDBusConnection*)>;
 
 auto dbus() -> DBus {
   GError* error = nullptr;
-  GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+  GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
 
-  if (error) {
+  if (error != nullptr) {
     spdlog::error("g_bus_get_sync() failed: {}", error->message);
     g_error_free(error);
     connection = nullptr;
@@ -21,7 +21,7 @@ auto dbus() -> DBus {
   auto destructor = [](GDBusConnection* connection) {
     GError* error = nullptr;
     g_dbus_connection_close_sync(connection, nullptr, &error);
-    if (error) {
+    if (error != nullptr) {
       spdlog::error("g_bus_connection_close_sync failed(): {}", error->message);
       g_error_free(error);
     }
@@ -35,12 +35,12 @@ auto getLocks(const DBus& bus, const std::string& inhibitors) -> int {
   GUnixFDList* fd_list;
   int handle;
 
-  auto reply = g_dbus_connection_call_with_unix_fd_list_sync(
+  auto* reply = g_dbus_connection_call_with_unix_fd_list_sync(
       bus.get(), "org.freedesktop.login1", "/org/freedesktop/login1",
       "org.freedesktop.login1.Manager", "Inhibit",
       g_variant_new("(ssss)", inhibitors.c_str(), "waybar", "Asked by user", "block"),
       G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &fd_list, nullptr, &error);
-  if (error) {
+  if (error != nullptr) {
     spdlog::error("g_dbus_connection_call_with_unix_fd_list_sync() failed: {}", error->message);
     g_error_free(error);
     handle = -1;
@@ -98,7 +98,7 @@ auto getInhibitors(const Json::Value& config) -> std::string {
 namespace waybar::modules {
 
 Inhibitor::Inhibitor(const std::string& id, const Bar& bar, const Json::Value& config)
-    : ALabel(config, "inhibitor", id, "{status}", true),
+    : ALabel(config, "inhibitor", id, "{status}", 1U),
       dbus_(::dbus()),
       inhibitors_(::getInhibitors(config)) {
   event_box_.add_events(Gdk::BUTTON_PRESS_MASK);
@@ -112,7 +112,7 @@ Inhibitor::~Inhibitor() {
   }
 }
 
-auto Inhibitor::activated() -> bool { return handle_ != -1; }
+auto Inhibitor::activated() const -> bool { return handle_ != -1; }
 
 auto Inhibitor::update() -> void {
   std::string status_text = activated() ? "activated" : "deactivated";
