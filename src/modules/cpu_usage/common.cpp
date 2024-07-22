@@ -70,7 +70,7 @@ std::tuple<std::vector<uint16_t>, std::string> waybar::modules::CpuUsage::getCpu
     if (i == 0) {
       tooltip = fmt::format("Total: {}%", tmp);
     } else {
-      tooltip = tooltip + fmt::format("\nCore{}: {}%", i - 1, tmp);
+      tooltip += fmt::format("\nCore{}: {}%", i - 1, tmp);
     }
     usage.push_back(tmp);
   }

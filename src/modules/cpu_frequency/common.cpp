@@ -1,5 +1,6 @@
-#include "modules/cpu_frequency.hpp"
+#include <numeric>
 
+#include "modules/cpu_frequency.hpp"
 // In the 80000 version of fmt library authors decided to optimize imports
 // and moved declarations required for fmt::dynamic_format_arg_store in new
 // header fmt/args.h
@@ -52,7 +53,7 @@ auto waybar::modules::CpuFrequency::update() -> void {
 std::tuple<float, float, float> waybar::modules::CpuFrequency::getCpuFrequency() {
   std::vector<float> frequencies = CpuFrequency::parseCpuFrequencies();
   if (frequencies.empty()) {
-    return {0.f, 0.f, 0.f};
+    return {0.F, 0.F, 0.F};
   }
   auto [min, max] = std::minmax_element(std::begin(frequencies), std::end(frequencies));
   float avg_frequency =

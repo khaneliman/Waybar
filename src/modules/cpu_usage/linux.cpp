@@ -1,4 +1,5 @@
-#include <filesystem>
+#include <fstream>
+#include <numeric>
 
 #include "modules/cpu_usage.hpp"
 
@@ -11,7 +12,7 @@ std::vector<std::tuple<size_t, size_t>> waybar::modules::CpuUsage::parseCpuinfo(
   std::vector<std::tuple<size_t, size_t>> cpuinfo;
   std::string line;
   while (getline(info, line)) {
-    if (line.substr(0, 3).compare("cpu") != 0) {
+    if (line.substr(0, 3) != "cpu") {
       break;
     }
     std::stringstream sline(line.substr(5));

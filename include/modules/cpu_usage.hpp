@@ -3,10 +3,7 @@
 #include <fmt/format.h>
 
 #include <cstdint>
-#include <fstream>
-#include <numeric>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "ALabel.hpp"
@@ -17,7 +14,7 @@ namespace waybar::modules {
 class CpuUsage : public ALabel {
  public:
   CpuUsage(const std::string&, const Json::Value&);
-  virtual ~CpuUsage() = default;
+  ~CpuUsage() override = default;
   auto update() -> void override;
 
   // This is a static member because it is also used by the cpu module.

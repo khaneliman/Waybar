@@ -2,11 +2,7 @@
 
 #include <fmt/format.h>
 
-#include <cstdint>
-#include <fstream>
-#include <numeric>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "ALabel.hpp"
@@ -17,7 +13,7 @@ namespace waybar::modules {
 class Cpu : public ALabel {
  public:
   Cpu(const std::string&, const Json::Value&);
-  virtual ~Cpu() = default;
+  ~Cpu() override = default;
   auto update() -> void override;
 
  private:

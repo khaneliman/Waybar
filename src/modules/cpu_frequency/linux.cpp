@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 
 #include "modules/cpu_frequency.hpp"
 
@@ -11,22 +12,22 @@ std::vector<float> waybar::modules::CpuFrequency::parseCpuFrequencies() {
   std::vector<float> frequencies;
   std::string line;
   while (getline(info, line)) {
-    if (line.substr(0, 7).compare("cpu MHz") != 0) {
+    if (line.substr(0, 7) != "cpu MHz") {
       continue;
     }
 
-    std::string frequency_str = line.substr(line.find(":") + 2);
+    std::string frequency_str = line.substr(line.find(':') + 2);
     float frequency = std::strtol(frequency_str.c_str(), nullptr, 10);
     frequencies.push_back(frequency);
   }
   info.close();
 
-  if (frequencies.size() <= 0) {
+  if (frequencies.empty()) {
     std::string cpufreq_dir = "/sys/devices/system/cpu/cpufreq";
     if (std::filesystem::exists(cpufreq_dir)) {
       std::vector<std::string> frequency_files = {"/cpuinfo_min_freq", "/cpuinfo_max_freq"};
-      for (auto& p : std::filesystem::directory_iterator(cpufreq_dir)) {
-        for (auto freq_file : frequency_files) {
+      for (const auto& p : std::filesystem::directory_iterator(cpufreq_dir)) {
+        for (const auto& freq_file : frequency_files) {
           std::string freq_file_path = p.path().string() + freq_file;
           if (std::filesystem::exists(freq_file_path)) {
             std::string freq_value;
