@@ -45,7 +45,7 @@ class Bluetooth : public ALabel {
 
  public:
   Bluetooth(const std::string&, const Json::Value&);
-  virtual ~Bluetooth() = default;
+  ~Bluetooth() override = default;
   auto update() -> void override;
 
  private:
@@ -58,9 +58,9 @@ class Bluetooth : public ALabel {
                                                 GDBusProxy*, GVariant*, const gchar* const*,
                                                 gpointer) -> void;
 
-  auto getDeviceBatteryPercentage(GDBusObject*) -> std::optional<unsigned char>;
-  auto getDeviceProperties(GDBusObject*, DeviceInfo&) -> bool;
-  auto getControllerProperties(GDBusObject*, ControllerInfo&) -> bool;
+  static auto getDeviceBatteryPercentage(GDBusObject*) -> std::optional<unsigned char>;
+  static auto getDeviceProperties(GDBusObject*, DeviceInfo&) -> bool;
+  static auto getControllerProperties(GDBusObject*, ControllerInfo&) -> bool;
 
   // Returns std::nullopt if no controller could be found
   auto findCurController() -> std::optional<ControllerInfo>;
