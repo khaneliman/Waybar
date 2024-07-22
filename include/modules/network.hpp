@@ -21,7 +21,7 @@ namespace waybar::modules {
 class Network : public ALabel {
  public:
   Network(const std::string&, const Json::Value&);
-  virtual ~Network();
+  ~Network() override;
   auto update() -> void override;
 
  private:
@@ -32,7 +32,7 @@ class Network : public ALabel {
   static int handleEventsDone(struct nl_msg*, void*);
   static int handleScan(struct nl_msg*, void*);
 
-  void askForStateDump(void);
+  void askForStateDump();
 
   void worker();
   void createInfoSocket();
@@ -41,12 +41,12 @@ class Network : public ALabel {
   void parseSignal(struct nlattr**);
   void parseFreq(struct nlattr**);
   void parseBssid(struct nlattr**);
-  bool associatedOrJoined(struct nlattr**);
-  bool checkInterface(std::string name);
+  static bool associatedOrJoined(struct nlattr**);
+  bool checkInterface(const std::string& name);
   auto getInfo() -> void;
-  const std::string getNetworkState() const;
+  std::string getNetworkState() const;
   void clearIface();
-  bool wildcardMatch(const std::string& pattern, const std::string& text) const;
+  static bool wildcardMatch(const std::string& pattern, const std::string& text);
   std::optional<std::pair<unsigned long long, unsigned long long>> readBandwidthUsage();
 
   int ifid_;

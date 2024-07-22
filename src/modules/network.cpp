@@ -4,7 +4,6 @@
 #include <spdlog/spdlog.h>
 #include <sys/eventfd.h>
 
-#include <cassert>
 #include <fstream>
 #include <optional>
 #include <sstream>
@@ -34,8 +33,8 @@ waybar::modules::Network::readBandwidthUsage() {
   std::getline(netdev, line);
   std::getline(netdev, line);
 
-  unsigned long long receivedBytes = 0ull;
-  unsigned long long transmittedBytes = 0ull;
+  unsigned long long receivedBytes = 0ULL;
+  unsigned long long transmittedBytes = 0ULL;
   while (std::getline(netdev, line)) {
     std::istringstream iss(line);
 
@@ -52,8 +51,8 @@ waybar::modules::Network::readBandwidthUsage() {
     //
     // We only care about the bytes count, so we'll just ignore the 7 other
     // columns.
-    unsigned long long r = 0ull;
-    unsigned long long t = 0ull;
+    unsigned long long r = 0ULL;
+    unsigned long long t = 0ULL;
     // Read received bytes
     iss >> r;
     // Skip all the other columns in the received group
@@ -166,7 +165,7 @@ void waybar::modules::Network::createEventSocket() {
   if (nl_connect(ev_sock_, NETLINK_ROUTE) != 0) {
     throw std::runtime_error("Can't connect network socket");
   }
-  if (nl_socket_set_nonblocking(ev_sock_)) {
+  if (nl_socket_set_nonblocking(ev_sock_) != 0) {
     throw std::runtime_error("Can't set non-blocking on network socket");
   }
   nl_socket_add_membership(ev_sock_, RTNLGRP_LINK);
@@ -277,7 +276,7 @@ void waybar::modules::Network::worker() {
   };
 }
 
-const std::string waybar::modules::Network::getNetworkState() const {
+std::string waybar::modules::Network::getNetworkState() const {
   if (ifid_ == -1) {
 #ifdef WANT_RFKILL
     if (rfkill_.getState()) return "disabled";
@@ -295,8 +294,8 @@ auto waybar::modules::Network::update() -> void {
   std::string tooltip_format;
 
   auto bandwidth = readBandwidthUsage();
-  auto bandwidth_down = 0ull;
-  auto bandwidth_up = 0ull;
+  auto bandwidth_down = 0ULL;
+  auto bandwidth_up = 0ULL;
   if (bandwidth.has_value()) {
     auto down_octets = (*bandwidth).first;
     auto up_octets = (*bandwidth).second;
@@ -338,10 +337,10 @@ auto waybar::modules::Network::update() -> void {
       fmt::arg("netmask", netmask_), fmt::arg("ipaddr", ipaddr_), fmt::arg("gwaddr", gwaddr_),
       fmt::arg("cidr", cidr_), fmt::arg("frequency", fmt::format("{:.1f}", frequency_)),
       fmt::arg("icon", getIcon(signal_strength_, state_)),
-      fmt::arg("bandwidthDownBits", pow_format(bandwidth_down * 8ull / interval_.count(), "b/s")),
-      fmt::arg("bandwidthUpBits", pow_format(bandwidth_up * 8ull / interval_.count(), "b/s")),
+      fmt::arg("bandwidthDownBits", pow_format(bandwidth_down * 8ULL / interval_.count(), "b/s")),
+      fmt::arg("bandwidthUpBits", pow_format(bandwidth_up * 8ULL / interval_.count(), "b/s")),
       fmt::arg("bandwidthTotalBits",
-               pow_format((bandwidth_up + bandwidth_down) * 8ull / interval_.count(), "b/s")),
+               pow_format((bandwidth_up + bandwidth_down) * 8ULL / interval_.count(), "b/s")),
       fmt::arg("bandwidthDownOctets", pow_format(bandwidth_down / interval_.count(), "o/s")),
       fmt::arg("bandwidthUpOctets", pow_format(bandwidth_up / interval_.count(), "o/s")),
       fmt::arg("bandwidthTotalOctets",
@@ -350,7 +349,7 @@ auto waybar::modules::Network::update() -> void {
       fmt::arg("bandwidthUpBytes", pow_format(bandwidth_up / interval_.count(), "B/s")),
       fmt::arg("bandwidthTotalBytes",
                pow_format((bandwidth_up + bandwidth_down) / interval_.count(), "B/s")));
-  if (text.compare(label_.get_label()) != 0) {
+  if (text != label_.get_label()) {
     label_.set_markup(text);
     if (text.empty()) {
       event_box_.hide();
@@ -371,10 +370,10 @@ auto waybar::modules::Network::update() -> void {
           fmt::arg("cidr", cidr_), fmt::arg("frequency", fmt::format("{:.1f}", frequency_)),
           fmt::arg("icon", getIcon(signal_strength_, state_)),
           fmt::arg("bandwidthDownBits",
-                   pow_format(bandwidth_down * 8ull / interval_.count(), "b/s")),
-          fmt::arg("bandwidthUpBits", pow_format(bandwidth_up * 8ull / interval_.count(), "b/s")),
+                   pow_format(bandwidth_down * 8ULL / interval_.count(), "b/s")),
+          fmt::arg("bandwidthUpBits", pow_format(bandwidth_up * 8ULL / interval_.count(), "b/s")),
           fmt::arg("bandwidthTotalBits",
-                   pow_format((bandwidth_up + bandwidth_down) * 8ull / interval_.count(), "b/s")),
+                   pow_format((bandwidth_up + bandwidth_down) * 8ULL / interval_.count(), "b/s")),
           fmt::arg("bandwidthDownOctets", pow_format(bandwidth_down / interval_.count(), "o/s")),
           fmt::arg("bandwidthUpOctets", pow_format(bandwidth_up / interval_.count(), "o/s")),
           fmt::arg("bandwidthTotalOctets",
@@ -395,7 +394,7 @@ auto waybar::modules::Network::update() -> void {
   ALabel::update();
 }
 
-bool waybar::modules::Network::checkInterface(std::string name) {
+bool waybar::modules::Network::checkInterface(const std::string &name) {
   if (config_["interface"].isString()) {
     return config_["interface"].asString() == name ||
            wildcardMatch(config_["interface"].asString(), name);
@@ -420,19 +419,19 @@ void waybar::modules::Network::clearIface() {
 }
 
 int waybar::modules::Network::handleEvents(struct nl_msg *msg, void *data) {
-  auto net = static_cast<waybar::modules::Network *>(data);
+  auto *net = static_cast<waybar::modules::Network *>(data);
   std::lock_guard<std::mutex> lock(net->mutex_);
-  auto nh = nlmsg_hdr(msg);
+  auto *nh = nlmsg_hdr(msg);
   bool is_del_event = false;
 
   switch (nh->nlmsg_type) {
     case RTM_DELLINK:
       is_del_event = true;
     case RTM_NEWLINK: {
-      struct ifinfomsg *ifi = static_cast<struct ifinfomsg *>(NLMSG_DATA(nh));
+      auto *ifi = static_cast<struct ifinfomsg *>(NLMSG_DATA(nh));
       ssize_t attrlen = IFLA_PAYLOAD(nh);
       struct rtattr *ifla = IFLA_RTA(ifi);
-      const char *ifname = NULL;
+      const char *ifname = nullptr;
       size_t ifname_len = 0;
       std::optional<bool> carrier;
 
@@ -442,7 +441,8 @@ int waybar::modules::Network::handleEvents(struct nl_msg *msg, void *data) {
 
       // Check if the interface goes "down" and if we want to detect the
       // external interface.
-      if (net->ifid_ != -1 && !(ifi->ifi_flags & IFF_UP) && !net->config_["interface"].isString()) {
+      if (net->ifid_ != -1 && ((ifi->ifi_flags & IFF_UP) == 0U) &&
+          !net->config_["interface"].isString()) {
         // The current interface is now down, all the routes associated with
         // it have been deleted, so start looking for a new default route.
         spdlog::debug("network: if{} down", net->ifid_);
@@ -458,7 +458,7 @@ int waybar::modules::Network::handleEvents(struct nl_msg *msg, void *data) {
           case IFLA_IFNAME:
             ifname = static_cast<const char *>(RTA_DATA(ifla));
             ifname_len = RTA_PAYLOAD(ifla) - 1;  // minus \0
-            if (ifi->ifi_flags & IFF_POINTOPOINT && net->checkInterface(ifname))
+            if (((ifi->ifi_flags & IFF_POINTOPOINT) != 0U) && net->checkInterface(ifname))
               net->is_p2p_ = true;
             break;
           case IFLA_CARRIER: {
@@ -470,7 +470,7 @@ int waybar::modules::Network::handleEvents(struct nl_msg *msg, void *data) {
 
       if (!is_del_event && ifi->ifi_index == net->ifid_) {
         // Update interface information
-        if (net->ifname_.empty() && ifname != NULL) {
+        if (net->ifname_.empty() && ifname != nullptr) {
           std::string new_ifname(ifname, ifname_len);
           net->ifname_ = new_ifname;
         }
@@ -499,7 +499,7 @@ int waybar::modules::Network::handleEvents(struct nl_msg *msg, void *data) {
 
           net->ifname_ = new_ifname;
           net->ifid_ = ifi->ifi_index;
-          if (ifi->ifi_flags & IFF_POINTOPOINT) net->is_p2p_ = true;
+          if ((ifi->ifi_flags & IFF_POINTOPOINT) != 0U) net->is_p2p_ = true;
           if (carrier.has_value()) {
             net->carrier_ = carrier.value();
           }
@@ -523,7 +523,7 @@ int waybar::modules::Network::handleEvents(struct nl_msg *msg, void *data) {
     case RTM_DELADDR:
       is_del_event = true;
     case RTM_NEWADDR: {
-      struct ifaddrmsg *ifa = static_cast<struct ifaddrmsg *>(NLMSG_DATA(nh));
+      auto *ifa = static_cast<struct ifaddrmsg *>(NLMSG_DATA(nh));
       ssize_t attrlen = IFA_PAYLOAD(nh);
       struct rtattr *ifa_rta = IFA_RTA(ifa);
 
@@ -590,7 +590,7 @@ int waybar::modules::Network::handleEvents(struct nl_msg *msg, void *data) {
       // Based on https://gist.github.com/Yawning/c70d804d4b8ae78cc698
       // to find the interface used to reach the outside world
 
-      struct rtmsg *rtm = static_cast<struct rtmsg *>(NLMSG_DATA(nh));
+      auto *rtm = static_cast<struct rtmsg *>(NLMSG_DATA(nh));
       ssize_t attrlen = RTM_PAYLOAD(nh);
       struct rtattr *attr = RTM_RTA(rtm);
       bool has_gateway = false;
@@ -707,7 +707,7 @@ int waybar::modules::Network::handleEvents(struct nl_msg *msg, void *data) {
   return NL_OK;
 }
 
-void waybar::modules::Network::askForStateDump(void) {
+void waybar::modules::Network::askForStateDump() {
   /* We need to wait until the current dump is done before sending new
    * messages. handleEventsDone() is called when a dump is done. */
   if (dump_in_progress_) return;
@@ -736,15 +736,15 @@ void waybar::modules::Network::askForStateDump(void) {
 }
 
 int waybar::modules::Network::handleEventsDone(struct nl_msg *msg, void *data) {
-  auto net = static_cast<waybar::modules::Network *>(data);
+  auto *net = static_cast<waybar::modules::Network *>(data);
   net->dump_in_progress_ = false;
   net->askForStateDump();
   return NL_OK;
 }
 
 int waybar::modules::Network::handleScan(struct nl_msg *msg, void *data) {
-  auto net = static_cast<waybar::modules::Network *>(data);
-  auto gnlh = static_cast<genlmsghdr *>(nlmsg_data(nlmsg_hdr(msg)));
+  auto *net = static_cast<waybar::modules::Network *>(data);
+  auto *gnlh = static_cast<genlmsghdr *>(nlmsg_data(nlmsg_hdr(msg)));
   struct nlattr *tb[NL80211_ATTR_MAX + 1];
   struct nlattr *bss[NL80211_BSS_MAX + 1];
   struct nla_policy bss_policy[NL80211_BSS_MAX + 1]{};
@@ -768,7 +768,7 @@ int waybar::modules::Network::handleScan(struct nl_msg *msg, void *data) {
   if (nla_parse_nested(bss, NL80211_BSS_MAX, tb[NL80211_ATTR_BSS], bss_policy) != 0) {
     return NL_SKIP;
   }
-  if (!net->associatedOrJoined(bss)) {
+  if (!waybar::modules::Network::associatedOrJoined(bss)) {
     return NL_SKIP;
   }
   net->parseEssid(bss);
@@ -780,7 +780,7 @@ int waybar::modules::Network::handleScan(struct nl_msg *msg, void *data) {
 
 void waybar::modules::Network::parseEssid(struct nlattr **bss) {
   if (bss[NL80211_BSS_INFORMATION_ELEMENTS] != nullptr) {
-    auto ies = static_cast<char *>(nla_data(bss[NL80211_BSS_INFORMATION_ELEMENTS]));
+    auto *ies = static_cast<char *>(nla_data(bss[NL80211_BSS_INFORMATION_ELEMENTS]));
     auto ies_len = nla_len(bss[NL80211_BSS_INFORMATION_ELEMENTS]);
     const auto hdr_len = 2;
     while (ies_len > hdr_len && ies[0] != 0) {
@@ -788,8 +788,8 @@ void waybar::modules::Network::parseEssid(struct nlattr **bss) {
       ies += ies[1] + hdr_len;
     }
     if (ies_len > hdr_len && ies_len > ies[1] + hdr_len) {
-      auto essid_begin = ies + hdr_len;
-      auto essid_end = essid_begin + ies[1];
+      auto *essid_begin = ies + hdr_len;
+      auto *essid_end = essid_begin + ies[1];
       std::string essid_raw;
       std::copy(essid_begin, essid_end, std::back_inserter(essid_raw));
       essid_ = Glib::Markup::escape_text(essid_raw);
@@ -842,7 +842,7 @@ void waybar::modules::Network::parseFreq(struct nlattr **bss) {
 
 void waybar::modules::Network::parseBssid(struct nlattr **bss) {
   if (bss[NL80211_BSS_BSSID] != nullptr) {
-    auto bssid = static_cast<uint8_t *>(nla_data(bss[NL80211_BSS_BSSID]));
+    auto *bssid = static_cast<uint8_t *>(nla_data(bss[NL80211_BSS_BSSID]));
     auto bssid_len = nla_len(bss[NL80211_BSS_BSSID]);
     if (bssid_len == 6) {
       bssid_ = fmt::format("{:x}:{:x}:{:x}:{:x}:{:x}:{:x}", bssid[0], bssid[1], bssid[2], bssid[3],
@@ -881,13 +881,14 @@ auto waybar::modules::Network::getInfo() -> void {
 }
 
 // https://gist.github.com/rressi/92af77630faf055934c723ce93ae2495
-bool waybar::modules::Network::wildcardMatch(const std::string &pattern,
-                                             const std::string &text) const {
+bool waybar::modules::Network::wildcardMatch(const std::string &pattern, const std::string &text) {
   auto P = int(pattern.size());
   auto T = int(text.size());
 
-  auto p = 0, fallback_p = -1;
-  auto t = 0, fallback_t = -1;
+  auto p = 0;
+  auto fallback_p = -1;
+  auto t = 0;
+  auto fallback_t = -1;
 
   while (t < T) {
     // Wildcard match:
