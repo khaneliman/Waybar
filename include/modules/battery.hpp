@@ -7,10 +7,7 @@
 #include <sys/inotify.h>
 #endif
 
-#include <algorithm>
-#include <fstream>
 #include <string>
-#include <vector>
 
 #include "ALabel.hpp"
 #include "bar.hpp"
@@ -23,7 +20,7 @@ namespace fs = std::filesystem;
 class Battery : public ALabel {
  public:
   Battery(const std::string&, const waybar::Bar&, const Json::Value&);
-  virtual ~Battery();
+  ~Battery() override;
   auto update() -> void override;
 
  private:
@@ -31,9 +28,9 @@ class Battery : public ALabel {
 
   void refreshBatteries();
   void worker();
-  const std::string getAdapterStatus(uint8_t capacity) const;
+  std::string getAdapterStatus(uint8_t capacity) const;
   std::tuple<uint8_t, float, std::string, float, uint16_t, float> getInfos();
-  const std::string formatTimeRemaining(float hoursRemaining);
+  std::string formatTimeRemaining(float hoursRemaining);
   void setBarClass(std::string&);
 
   int global_watch;

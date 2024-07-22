@@ -1,6 +1,7 @@
 #include "modules/battery.hpp"
 
 #include <algorithm>
+#include <fstream>
 #if defined(__FreeBSD__)
 #include <sys/sysctl.h>
 #endif
@@ -67,7 +68,7 @@ void waybar::modules::Battery::worker() {
   thread_ = [this] {
     struct inotify_event event = {0};
     int nbytes = read(battery_watch_fd_, &event, sizeof(event));
-    if (nbytes != sizeof(event) || event.mask & IN_IGNORED) {
+    if (nbytes != sizeof(event) || ((event.mask & IN_IGNORED) != 0U)) {
       thread_.stop();
       return;
     }
@@ -76,7 +77,7 @@ void waybar::modules::Battery::worker() {
   thread_battery_update_ = [this] {
     struct inotify_event event = {0};
     int nbytes = read(global_watch_fd_, &event, sizeof(event));
-    if (nbytes != sizeof(event) || event.mask & IN_IGNORED) {
+    if (nbytes != sizeof(event) || ((event.mask & IN_IGNORED) != 0U)) {
       thread_.stop();
       return;
     }
@@ -96,7 +97,7 @@ void waybar::modules::Battery::refreshBatteries() {
   }
 
   try {
-    for (auto& node : fs::directory_iterator(data_dir_)) {
+    for (const auto& node : fs::directory_iterator(data_dir_)) {
       if (!fs::is_directory(node)) {
         continue;
       }
@@ -111,7 +112,7 @@ void waybar::modules::Battery::refreshBatteries() {
         std::string type;
         std::ifstream(node.path() / "type") >> type;
 
-        if (!type.compare("Battery")) {
+        if (type == "Battery") {
           // Ignore non-system power supplies unless explicitly requested
           if (!bat_defined && fs::exists(node.path() / "scope")) {
             std::string scope;
@@ -168,16 +169,11 @@ void waybar::modules::Battery::refreshBatteries() {
 
 // Unknown > Full > Not charging > Discharging > Charging
 static bool status_gt(const std::string& a, const std::string& b) {
-  if (a == b)
-    return false;
-  else if (a == "Unknown")
-    return true;
-  else if (a == "Full" && b != "Unknown")
-    return true;
-  else if (a == "Not charging" && b != "Unknown" && b != "Full")
-    return true;
-  else if (a == "Discharging" && b != "Unknown" && b != "Full" && b != "Not charging")
-    return true;
+  if (a == b) return false;
+  if (a == "Unknown") return true;
+  if (a == "Full" && b != "Unknown") return true;
+  if (a == "Not charging" && b != "Unknown" && b != "Full") return true;
+  if (a == "Discharging" && b != "Unknown" && b != "Full" && b != "Not charging") return true;
   return false;
 }
 
@@ -460,7 +456,7 @@ waybar::modules::Battery::getInfos() {
           energy_now_exists = true;
           energy_now =
               (uint64_t)voltage_now * (uint64_t)capacity * (uint64_t)charge_full / 1000000 / 100;
-        } else if (capacity_exists && energy_full) {
+        } else if (capacity_exists && (energy_full != 0U)) {
           if (voltage_now != 0) {
             charge_full_exists = true;
             charge_full = 1000000 * (uint64_t)energy_full / (uint64_t)voltage_now;
@@ -481,7 +477,7 @@ waybar::modules::Battery::getInfos() {
           charge_full = 100 * (uint64_t)charge_now / (uint64_t)capacity;
           energy_full_exists = true;
           energy_full = (uint64_t)charge_now * (uint64_t)voltage_now / (uint64_t)capacity / 10000;
-        } else if (capacity_exists && energy_now) {
+        } else if (capacity_exists && (energy_now != 0U)) {
           if (voltage_now != 0) {
             charge_now_exists = true;
             charge_now = 1000000 * (uint64_t)energy_now / (uint64_t)voltage_now;
@@ -543,59 +539,59 @@ waybar::modules::Battery::getInfos() {
       if (online && current_status != "Discharging") status = "Plugged";
     }
 
-    float time_remaining{0.0f};
+    float time_remaining{0.0F};
     if (status == "Discharging" && time_to_empty_now_exists) {
-      if (time_to_empty_now != 0) time_remaining = (float)time_to_empty_now / 3600.0f;
+      if (time_to_empty_now != 0) time_remaining = (float)time_to_empty_now / 3600.0F;
     } else if (status == "Discharging" && total_power_exists && total_energy_exists) {
       if (total_power != 0) time_remaining = (float)total_energy / total_power;
     } else if (status == "Charging" && time_to_full_now_exists) {
       if (time_to_full_now_exists && (time_to_full_now != 0))
-        time_remaining = -(float)time_to_full_now / 3600.0f;
+        time_remaining = -(float)time_to_full_now / 3600.0F;
       // If we've turned positive it means the battery is past 100% and so just report that as no
       // time remaining
-      if (time_remaining > 0.0f) time_remaining = 0.0f;
+      if (time_remaining > 0.0F) time_remaining = 0.0F;
     } else if (status == "Charging" && total_energy_exists && total_energy_full_exists &&
                total_power_exists) {
       if (total_power != 0)
         time_remaining = -(float)(total_energy_full - total_energy) / total_power;
       // If we've turned positive it means the battery is past 100% and so just report that as no
       // time remaining
-      if (time_remaining > 0.0f) time_remaining = 0.0f;
+      if (time_remaining > 0.0F) time_remaining = 0.0F;
     }
 
-    float calculated_capacity{0.0f};
+    float calculated_capacity{0.0F};
     if (total_capacity_exists) {
-      if (total_capacity > 0.0f)
+      if (total_capacity > 0.0F)
         calculated_capacity = (float)total_capacity / batteries_.size();
       else if (total_energy_full_exists && total_energy_exists) {
-        if (total_energy_full > 0.0f)
-          calculated_capacity = ((float)total_energy * 100.0f / (float)total_energy_full);
+        if (total_energy_full > 0.0F)
+          calculated_capacity = ((float)total_energy * 100.0F / (float)total_energy_full);
       }
     }
 
     // Handle weighted-average
     if ((config_["weighted-average"].isBool() ? config_["weighted-average"].asBool() : false) &&
         total_energy_exists && total_energy_full_exists) {
-      if (total_energy_full > 0.0f)
-        calculated_capacity = ((float)total_energy * 100.0f / (float)total_energy_full);
+      if (total_energy_full > 0.0F)
+        calculated_capacity = ((float)total_energy * 100.0F / (float)total_energy_full);
     }
 
     // Handle design-capacity
     if ((config_["design-capacity"].isBool() ? config_["design-capacity"].asBool() : false) &&
         total_energy_exists && total_energy_full_design_exists) {
-      if (total_energy_full_design > 0.0f)
-        calculated_capacity = ((float)total_energy * 100.0f / (float)total_energy_full_design);
+      if (total_energy_full_design > 0.0F)
+        calculated_capacity = ((float)total_energy * 100.0F / (float)total_energy_full_design);
     }
 
     // Handle full-at
     if (config_["full-at"].isUInt()) {
       auto full_at = config_["full-at"].asUInt();
-      if (full_at < 100) calculated_capacity = 100.f * calculated_capacity / full_at;
+      if (full_at < 100) calculated_capacity = 100.F * calculated_capacity / full_at;
     }
 
     // Handle it gracefully by clamping at 100%
     // This can happen when the battery is calibrating and goes above 100%
-    if (calculated_capacity > 100.f) calculated_capacity = 100.f;
+    if (calculated_capacity > 100.F) calculated_capacity = 100.F;
 
     uint8_t cap = round(calculated_capacity);
     // If we've reached 100% just mark as full as some batteries can stay stuck reporting they're
@@ -607,11 +603,11 @@ waybar::modules::Battery::getInfos() {
 #endif
   } catch (const std::exception& e) {
     spdlog::error("Battery: {}", e.what());
-    return {0, 0, "Unknown", 0, 0, 0.0f};
+    return {0, 0, "Unknown", 0, 0, 0.0F};
   }
 }
 
-const std::string waybar::modules::Battery::getAdapterStatus(uint8_t capacity) const {
+std::string waybar::modules::Battery::getAdapterStatus(uint8_t capacity) const {
 #if defined(__FreeBSD__)
   int state;
   size_t size_state = sizeof state;
@@ -639,10 +635,10 @@ const std::string waybar::modules::Battery::getAdapterStatus(uint8_t capacity) c
   return "Unknown";
 }
 
-const std::string waybar::modules::Battery::formatTimeRemaining(float hoursRemaining) {
+std::string waybar::modules::Battery::formatTimeRemaining(float hoursRemaining) {
   hoursRemaining = std::fabs(hoursRemaining);
-  uint16_t full_hours = static_cast<uint16_t>(hoursRemaining);
-  uint16_t minutes = static_cast<uint16_t>(60 * (hoursRemaining - full_hours));
+  auto full_hours = static_cast<uint16_t>(hoursRemaining);
+  auto minutes = static_cast<uint16_t>(60 * (hoursRemaining - full_hours));
   auto format = std::string("{H} h {M} min");
   if (full_hours == 0 && minutes == 0) {
     // Migh as well not show "0h 0min"
