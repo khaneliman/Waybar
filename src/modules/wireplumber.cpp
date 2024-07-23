@@ -235,7 +235,7 @@ void waybar::modules::Wireplumber::onPluginActivated(WpObject* p, GAsyncResult* 
 void waybar::modules::Wireplumber::activatePlugins() {
   spdlog::debug("[{}]: activating plugins", name_);
   for (uint16_t i = 0; i < apis_->len; i++) {
-    WpPlugin* plugin = static_cast<WpPlugin*>(g_ptr_array_index(apis_, i));
+    auto* plugin = static_cast<WpPlugin*>(g_ptr_array_index(apis_, i));
     pending_plugins_++;
     wp_object_activate(WP_OBJECT(plugin), WP_PLUGIN_FEATURE_ENABLED, nullptr,
                        (GAsyncReadyCallback)onPluginActivated, this);

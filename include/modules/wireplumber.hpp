@@ -3,9 +3,6 @@
 #include <fmt/format.h>
 #include <wp/wp.h>
 
-#include <algorithm>
-#include <array>
-
 #include "ALabel.hpp"
 
 namespace waybar::modules {
@@ -13,7 +10,7 @@ namespace waybar::modules {
 class Wireplumber : public ALabel {
  public:
   Wireplumber(const std::string&, const Json::Value&);
-  virtual ~Wireplumber();
+  ~Wireplumber() override;
   auto update() -> void override;
 
  private:
@@ -42,7 +39,7 @@ class Wireplumber : public ALabel {
   bool muted_;
   double volume_;
   double min_step_;
-  uint32_t node_id_{0};
+  uint32_t node_id_;
   std::string node_name_;
 };
 
