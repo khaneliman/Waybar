@@ -63,16 +63,14 @@ void PulseaudioSlider::onValueChanged() {
     }
 
     // If the sink/source is mute, but the user clicked the slider, unmute it!
-    else {
-      switch (target) {
-        case PulseaudioSliderTarget::Sink:
-          backend->toggleSinkMute(false);
-          break;
+    switch (target) {
+      case PulseaudioSliderTarget::Sink:
+        backend->toggleSinkMute(false);
+        break;
 
-        case PulseaudioSliderTarget::Source:
-          backend->toggleSourceMute(false);
-          break;
-      }
+      case PulseaudioSliderTarget::Source:
+        backend->toggleSourceMute(false);
+        break;
     }
   }
 
