@@ -7,16 +7,7 @@
 #include <algorithm>
 #include <chrono>
 
-#include "gdkmm/cursor.h"
-#include "gdkmm/event.h"
-#include "gdkmm/types.h"
 #include "glibmm/fileutils.h"
-#include "sigc++/functors/mem_fun.h"
-#include "sigc++/functors/ptr_fun.h"
-
-#if HAVE_CPU_LINUX
-#include <sys/sysinfo.h>
-#endif
 
 #if HAVE_CPU_BSD
 #include <time.h>
@@ -37,7 +28,7 @@ User::User(const std::string& id, const Json::Value& config)
 bool User::handleToggle(GdkEventButton* const& e) {
   if (AIconLabel::config_["open-on-click"].isBool() &&
       AIconLabel::config_["open-on-click"].asBool() && e->button == LEFT_MOUSE_BUTTON_CODE) {
-    std::string openPath = this->get_user_home_dir();
+    std::string openPath = waybar::modules::User::get_user_home_dir();
     if (AIconLabel::config_["open-path"].isString()) {
       std::string customPath = AIconLabel::config_["open-path"].asString();
       if (!customPath.empty()) {
@@ -50,30 +41,6 @@ bool User::handleToggle(GdkEventButton* const& e) {
   return true;
 }
 
-long User::uptime_as_seconds() {
-  long uptime = 0;
-
-#if HAVE_CPU_LINUX
-  struct sysinfo s_info;
-  if (0 == sysinfo(&s_info)) {
-    uptime = s_info.uptime;
-  }
-#endif
-
-#if HAVE_CPU_BSD
-  struct timespec s_info;
-  if (0 == clock_gettime(CLOCK_UPTIME_PRECISE, &s_info)) {
-    uptime = s_info.tv_sec;
-  }
-#endif
-
-  return uptime;
-}
-
-std::string User::get_user_login() const { return Glib::get_user_name(); }
-
-std::string User::get_user_home_dir() const { return Glib::get_home_dir(); }
-
 void User::init_update_worker() {
   this->thread_ = [this] {
     ALabel::dp.emit();
@@ -84,9 +51,10 @@ void User::init_update_worker() {
 }
 
 void User::init_avatar(const Json::Value& config) {
-  int height =
-      config["height"].isUInt() ? config["height"].asUInt() : this->defaultUserImageHeight_;
-  int width = config["width"].isUInt() ? config["width"].asUInt() : this->defaultUserImageWidth_;
+  int height = config["height"].isUInt() ? config["height"].asUInt()
+                                         : waybar::modules::User::defaultUserImageHeight_;
+  int width = config["width"].isUInt() ? config["width"].asUInt()
+                                       : waybar::modules::User::defaultUserImageWidth_;
 
   if (config["avatar"].isString()) {
     std::string userAvatar = config["avatar"].asString();
@@ -99,12 +67,8 @@ void User::init_avatar(const Json::Value& config) {
   this->init_default_user_avatar(width, width);
 }
 
-std::string User::get_default_user_avatar_path() const {
-  return this->get_user_home_dir() + "/" + ".face";
-}
-
 void User::init_default_user_avatar(int width, int height) {
-  this->init_user_avatar(this->get_default_user_avatar_path(), width, height);
+  this->init_user_avatar(waybar::modules::User::get_default_user_avatar_path(), width, height);
 }
 
 void User::init_user_avatar(const std::string& path, int width, int height) {
@@ -117,11 +81,11 @@ void User::init_user_avatar(const std::string& path, int width, int height) {
 }
 
 auto User::update() -> void {
-  std::string systemUser = this->get_user_login();
+  std::string systemUser = waybar::modules::User::get_user_login();
   std::transform(systemUser.cbegin(), systemUser.cend(), systemUser.begin(),
                  [](unsigned char c) { return std::toupper(c); });
 
-  long uptimeSeconds = this->uptime_as_seconds();
+  long uptimeSeconds = waybar::modules::User::uptime_as_seconds();
   auto workSystemTimeSeconds = std::chrono::seconds(uptimeSeconds);
   auto currentSystemTime = std::chrono::system_clock::now();
   auto startSystemTime = currentSystemTime - workSystemTimeSeconds;
