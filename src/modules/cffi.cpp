@@ -3,9 +3,7 @@
 #include <dlfcn.h>
 #include <json/value.h>
 
-#include <algorithm>
-#include <iostream>
-#include <type_traits>
+#include <cassert>
 
 namespace waybar::modules {
 
@@ -22,7 +20,7 @@ CFFI::CFFI(const std::string& name, const std::string& id, const Json::Value& co
   }
 
   // Fetch ABI version
-  auto wbcffi_version = reinterpret_cast<size_t*>(dlsym(handle, "wbcffi_version"));
+  auto* wbcffi_version = reinterpret_cast<size_t*>(dlsym(handle, "wbcffi_version"));
   if (wbcffi_version == nullptr) {
     throw std::runtime_error{std::string{"Missing wbcffi_version function: "} + dlerror()};
   }
@@ -56,12 +54,12 @@ CFFI::CFFI(const std::string& name, const std::string& id, const Json::Value& co
   // Convert JSON values to string
   std::vector<std::string> config_entries_stringstor;
   const auto& keys = config.getMemberNames();
-  for (size_t i = 0; i < keys.size(); i++) {
-    const auto& value = config[keys[i]];
+  for (const auto& key : keys) {
+    const auto& value = config[key];
     if (value.isConvertibleTo(Json::ValueType::stringValue)) {
-      config_entries_stringstor.push_back(config[keys[i]].asString());
+      config_entries_stringstor.push_back(config[key].asString());
     } else {
-      config_entries_stringstor.push_back(config[keys[i]].toStyledString());
+      config_entries_stringstor.push_back(config[key].toStyledString());
     }
   }
 
