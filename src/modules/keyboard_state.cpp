@@ -1,10 +1,9 @@
 #include "modules/keyboard_state.hpp"
 
-#include <errno.h>
 #include <spdlog/spdlog.h>
-#include <string.h>
 
-#include <filesystem>
+#include <cerrno>
+#include <cstring>
 
 extern "C" {
 #include <fcntl.h>
@@ -32,12 +31,12 @@ class errno_error : public std::runtime_error {
 #if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 32)
     // strerrorname_np gets the error code's name; it's nice to have, but it's a recent GNU
     // extension
-    const auto errno_name = strerrorname_np(err);
+    const auto* const errno_name = strerrorname_np(err);
     error_msg += errno_name;
     error_msg += " ";
 #endif
 
-    const auto errno_str = strerror(err);
+    auto* const errno_str = strerror(err);
     error_msg += errno_str;
 
     return error_msg;
@@ -49,9 +48,8 @@ auto openFile(const std::string& path, int flags) -> int {
   if (fd < 0) {
     if (errno == EACCES) {
       throw errno_error(errno, "Can't open " + path + " (are you in the input group?)");
-    } else {
-      throw errno_error(errno, "Can't open " + path);
     }
+    throw errno_error(errno, "Can't open " + path);
   }
   return fd;
 }
@@ -73,9 +71,10 @@ auto openDevice(int fd) -> libevdev* {
 }
 
 auto supportsLockStates(const libevdev* dev) -> bool {
-  return libevdev_has_event_type(dev, EV_LED) && libevdev_has_event_code(dev, EV_LED, LED_NUML) &&
-         libevdev_has_event_code(dev, EV_LED, LED_CAPSL) &&
-         libevdev_has_event_code(dev, EV_LED, LED_SCROLLL);
+  return (libevdev_has_event_type(dev, EV_LED) != 0) &&
+         (libevdev_has_event_code(dev, EV_LED, LED_NUML) != 0) &&
+         (libevdev_has_event_code(dev, EV_LED, LED_CAPSL) != 0) &&
+         (libevdev_has_event_code(dev, EV_LED, LED_SCROLLL) != 0);
 }
 
 waybar::modules::KeyboardState::KeyboardState(const std::string& id, const Bar& bar,
@@ -114,7 +113,7 @@ waybar::modules::KeyboardState::KeyboardState(const std::string& id, const Bar& 
     spdlog::warn("keyboard-state: interval is deprecated");
   }
 
-  libinput_ = libinput_path_create_context(&interface, NULL);
+  libinput_ = libinput_path_create_context(&interface, nullptr);
 
   box_.set_name("keyboard-state");
   if (config_["numlock"].asBool()) {
@@ -163,7 +162,7 @@ waybar::modules::KeyboardState::KeyboardState(const std::string& id, const Bar& 
     throw errno_error(errno, "Failed to open " + devices_path_);
   }
   dirent* ep;
-  while ((ep = readdir(dev_dir))) {
+  while ((ep = readdir(dev_dir)) != nullptr) {
     if (ep->d_type == DT_DIR) continue;
     std::string dev_path = devices_path_ + ep->d_name;
     tryAddDevice(dev_path);
@@ -175,15 +174,15 @@ waybar::modules::KeyboardState::KeyboardState(const std::string& id, const Bar& 
 
   libinput_thread_ = [this] {
     dp.emit();
-    while (1) {
+    while (true) {
       struct pollfd fd = {libinput_get_fd(libinput_), POLLIN, 0};
       poll(&fd, 1, -1);
       libinput_dispatch(libinput_);
       struct libinput_event* event;
-      while ((event = libinput_get_event(libinput_))) {
+      while ((event = libinput_get_event(libinput_)) != nullptr) {
         auto type = libinput_event_get_type(event);
         if (type == LIBINPUT_EVENT_KEYBOARD_KEY) {
-          auto keyboard_event = libinput_event_get_keyboard_event(event);
+          auto* keyboard_event = libinput_event_get_keyboard_event(event);
           auto state = libinput_event_keyboard_get_key_state(keyboard_event);
           if (state == LIBINPUT_KEY_STATE_RELEASED) {
             uint32_t key = libinput_event_keyboard_get_key(keyboard_event);
@@ -205,7 +204,7 @@ waybar::modules::KeyboardState::KeyboardState(const std::string& id, const Bar& 
       return;
     }
     inotify_add_watch(fd, devices_path_.c_str(), IN_CREATE | IN_DELETE);
-    while (1) {
+    while (true) {
       int BUF_LEN = 1024 * (sizeof(struct inotify_event) + 16);
       char buf[BUF_LEN];
       int length = read(fd, buf, 1024);
@@ -214,12 +213,12 @@ waybar::modules::KeyboardState::KeyboardState(const std::string& id, const Bar& 
         return;
       }
       for (int i = 0; i < length;) {
-        struct inotify_event* event = (struct inotify_event*)&buf[i];
+        auto* event = (struct inotify_event*)&buf[i];
         std::string dev_path = devices_path_ + event->name;
-        if (event->mask & IN_CREATE) {
+        if ((event->mask & IN_CREATE) != 0U) {
           // Wait for device setup
           int timeout = 10;
-          while (timeout--) {
+          while ((timeout--) != 0) {
             try {
               int fd = openFile(dev_path, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
               closeFile(fd);
@@ -231,7 +230,7 @@ waybar::modules::KeyboardState::KeyboardState(const std::string& id, const Bar& 
             }
           }
           tryAddDevice(dev_path);
-        } else if (event->mask & IN_DELETE) {
+        } else if ((event->mask & IN_DELETE) != 0U) {
           auto it = libinput_devices_.find(dev_path);
           if (it != libinput_devices_.end()) {
             spdlog::info("Keyboard {} has been removed.", dev_path);
@@ -252,7 +251,9 @@ waybar::modules::KeyboardState::~KeyboardState() {
 
 auto waybar::modules::KeyboardState::update() -> void {
   sleep(0);  // Wait for keyboard status change
-  int numl = 0, capsl = 0, scrolll = 0;
+  int numl = 0;
+  int capsl = 0;
+  int scrolll = 0;
 
   try {
     std::string dev_path;
@@ -263,7 +264,7 @@ auto waybar::modules::KeyboardState::update() -> void {
       dev_path = libinput_devices_.begin()->first;
     }
     int fd = openFile(dev_path, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
-    auto dev = openDevice(fd);
+    auto* dev = openDevice(fd);
     numl = libevdev_get_event_value(dev, EV_LED, LED_NUML);
     capsl = libevdev_get_event_value(dev, EV_LED, LED_CAPSL);
     scrolll = libevdev_get_event_value(dev, EV_LED, LED_SCROLLL);
@@ -305,11 +306,11 @@ auto waybar::modules::KeyboardState::update() -> void {
 auto waybar::modules ::KeyboardState::tryAddDevice(const std::string& dev_path) -> void {
   try {
     int fd = openFile(dev_path, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
-    auto dev = openDevice(fd);
+    auto* dev = openDevice(fd);
     if (supportsLockStates(dev)) {
       spdlog::info("Found device {} at '{}'", libevdev_get_name(dev), dev_path);
       if (libinput_devices_.find(dev_path) == libinput_devices_.end()) {
-        auto device = libinput_path_add_device(libinput_, dev_path.c_str());
+        auto* device = libinput_path_add_device(libinput_, dev_path.c_str());
         libinput_device_ref(device);
         libinput_devices_[dev_path] = device;
       }
