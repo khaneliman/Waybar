@@ -4,8 +4,6 @@
 #include <jack/jack.h>
 #include <jack/thread.h>
 
-#include <fstream>
-
 #include "ALabel.hpp"
 #include "util/sleeper_thread.hpp"
 
@@ -14,7 +12,7 @@ namespace waybar::modules {
 class JACK : public ALabel {
  public:
   JACK(const std::string &, const Json::Value &);
-  virtual ~JACK() = default;
+  ~JACK() override = default;
   auto update() -> void override;
 
   int bufSize(jack_nframes_t size);

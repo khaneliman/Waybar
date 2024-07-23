@@ -5,7 +5,7 @@ namespace waybar::modules {
 JACK::JACK(const std::string &id, const Json::Value &config)
     : ALabel(config, "jack", id, "{load}%", 1) {
   running_ = false;
-  client_ = NULL;
+  client_ = nullptr;
 
   thread_ = [this] {
     dp.emit();
@@ -25,13 +25,13 @@ std::string JACK::JACKState() {
   bufsize_ = 0;
   samplerate_ = 0;
 
-  if (client_) {
+  if (client_ != nullptr) {
     jack_client_close(client_);
-    client_ = NULL;
+    client_ = nullptr;
   }
 
-  client_ = jack_client_open("waybar", JackNoStartServer, NULL);
-  if (!client_) return "disconnected";
+  client_ = jack_client_open("waybar", JackNoStartServer, nullptr);
+  if (client_ == nullptr) return "disconnected";
 
   if (config_["realtime"].isBool() && !config_["realtime"].asBool()) {
     pthread_t jack_thread = jack_client_thread_id(client_);
@@ -44,7 +44,7 @@ std::string JACK::JACKState() {
   jack_set_buffer_size_callback(client_, bufSizeCallback, this);
   jack_set_xrun_callback(client_, xrunCallback, this);
   jack_on_shutdown(client_, shutdownCallback, this);
-  if (jack_activate(client_)) return "disconnected";
+  if (jack_activate(client_) != 0) return "disconnected";
 
   running_ = true;
   return "connected";
