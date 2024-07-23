@@ -49,11 +49,12 @@ waybar::modules::Cava::Cava(const std::string& id, const Json::Value& config)
   if (config_["source"].isString()) prm_.audio_source = config_["source"].asString().data();
   if (config_["sample_rate"].isNumeric()) prm_.samplerate = config_["sample_rate"].asLargestInt();
   if (config_["sample_bits"].isInt()) prm_.samplebits = config_["sample_bits"].asInt();
-  if (config_["stereo"].isBool()) prm_.stereo = config_["stereo"].asBool();
-  if (config_["reverse"].isBool()) prm_.reverse = config_["reverse"].asBool();
+  if (config_["stereo"].isBool()) prm_.stereo = static_cast<int>(config_["stereo"].asBool());
+  if (config_["reverse"].isBool()) prm_.reverse = static_cast<int>(config_["reverse"].asBool());
   if (config_["bar_delimiter"].isInt()) prm_.bar_delim = config_["bar_delimiter"].asInt();
-  if (config_["monstercat"].isBool()) prm_.monstercat = config_["monstercat"].asBool();
-  if (config_["waves"].isBool()) prm_.waves = config_["waves"].asBool();
+  if (config_["monstercat"].isBool())
+    prm_.monstercat = static_cast<double>(config_["monstercat"].asBool());
+  if (config_["waves"].isBool()) prm_.waves = static_cast<int>(config_["waves"].asBool());
   if (config_["noise_reduction"].isDouble())
     prm_.noise_reduction = config_["noise_reduction"].asDouble();
   if (config_["input_delay"].isInt())
@@ -82,7 +83,7 @@ waybar::modules::Cava::Cava(const std::string& id, const Json::Value& config)
   audio_data_.suspendFlag = false;
   input_source_ = get_input(&audio_data_, &prm_);
 
-  if (!input_source_) {
+  if (input_source_ == nullptr) {
     spdlog::error("cava API didn't provide input audio source method");
     exit(EXIT_FAILURE);
   }
@@ -91,7 +92,7 @@ waybar::modules::Cava::Cava(const std::string& id, const Json::Value& config)
 
   // Init cava plan, audio_raw structure
   audio_raw_init(&audio_data_, &audio_raw_, &prm_, plan_);
-  if (!plan_) spdlog::error("cava plan is not provided");
+  if (plan_ == nullptr) spdlog::error("cava plan is not provided");
   audio_raw_.previous_frame[0] = -1;  // For first Update() call need to rePaint text message
   // Read audio source trough cava API. Cava orginizes this process via infinity loop
   thread_fetch_input_ = [this] {
@@ -131,14 +132,14 @@ auto waybar::modules::Cava::update() -> void {
   silence_ = true;
 
   for (int i{0}; i < audio_data_.input_buffer_size; ++i) {
-    if (audio_data_.cava_in[i]) {
+    if (audio_data_.cava_in[i] != 0.0) {
       silence_ = false;
       sleep_counter_ = 0;
       break;
     }
   }
 
-  if (silence_ && prm_.sleep_timer) {
+  if (silence_ && (prm_.sleep_timer != 0)) {
     if (sleep_counter_ <=
         (int)(std::chrono::milliseconds(prm_.sleep_timer * 1s) / frame_time_milsec_)) {
       ++sleep_counter_;
@@ -180,7 +181,7 @@ auto waybar::modules::Cava::update() -> void {
 }
 
 auto waybar::modules::Cava::doAction(const std::string& name) -> void {
-  if ((actionMap_[name])) {
+  if ((actionMap_[name]) != nullptr) {
     (this->*actionMap_[name])();
   } else
     spdlog::error("Cava. Unsupported action \"{0}\"", name);

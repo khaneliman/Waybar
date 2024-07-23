@@ -15,7 +15,7 @@ using namespace std::literals::chrono_literals;
 class Cava final : public ALabel {
  public:
   Cava(const std::string&, const Json::Value&);
-  virtual ~Cava();
+  ~Cava() override;
   auto update() -> void override;
   auto doAction(const std::string& name) -> void override;
 
