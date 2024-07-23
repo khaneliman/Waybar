@@ -60,9 +60,9 @@ UPower::UPower(const std::string &id, const Json::Value &config)
                              sigc::mem_fun(*this, &UPower::getConn_cb));
 
   // Make UPower client
-  GError **gErr = NULL;
-  upClient_ = up_client_new_full(NULL, gErr);
-  if (upClient_ == NULL)
+  GError **gErr = nullptr;
+  upClient_ = up_client_new_full(nullptr, gErr);
+  if (upClient_ == nullptr)
     spdlog::error("Upower. UPower client connection error. {}", (*gErr)->message);
 
   // Subscribe UPower events
@@ -80,18 +80,18 @@ UPower::UPower(const std::string &id, const Json::Value &config)
 }
 
 UPower::~UPower() {
-  if (upDevice_.upDevice != NULL) g_object_unref(upDevice_.upDevice);
-  if (upClient_ != NULL) g_object_unref(upClient_);
-  if (subscrID_ > 0u) {
+  if (upDevice_.upDevice != nullptr) g_object_unref(upDevice_.upDevice);
+  if (upClient_ != nullptr) g_object_unref(upClient_);
+  if (subscrID_ > 0U) {
     conn_->signal_unsubscribe(subscrID_);
-    subscrID_ = 0u;
+    subscrID_ = 0U;
   }
   Gio::DBus::unwatch_name(watcherID_);
-  watcherID_ = 0u;
+  watcherID_ = 0U;
   removeDevices();
 }
 
-static const std::string getDeviceStatus(UpDeviceState &state) {
+static std::string getDeviceStatus(UpDeviceState &state) {
   switch (state) {
     case UP_DEVICE_STATE_CHARGING:
     case UP_DEVICE_STATE_PENDING_CHARGE:
@@ -108,7 +108,7 @@ static const std::string getDeviceStatus(UpDeviceState &state) {
   }
 }
 
-static const std::string getDeviceIcon(UpDeviceKind &kind) {
+static std::string getDeviceIcon(UpDeviceKind &kind) {
   switch (kind) {
     case UP_DEVICE_KIND_LINE_POWER:
       return "ac-adapter-symbolic";
@@ -194,7 +194,7 @@ auto UPower::update() -> void {
 
   getUpDeviceInfo(upDevice_);
 
-  if (upDevice_.upDevice == NULL && hideIfEmpty_) {
+  if (upDevice_.upDevice == nullptr && hideIfEmpty_) {
     box_.hide();
     return;
   }
@@ -211,7 +211,7 @@ auto UPower::update() -> void {
   if (!box_.get_style_context()->has_class(status)) box_.get_style_context()->add_class(status);
   lastStatus_ = status;
 
-  if (devices_.size() == 0 && !upDeviceValid && hideIfEmpty_) {
+  if (devices_.empty() && !upDeviceValid && hideIfEmpty_) {
     box_.hide();
     // Call parent update
     AModule::update();
@@ -220,7 +220,7 @@ auto UPower::update() -> void {
 
   label_.set_markup(getText(upDevice_, format_));
   // Set icon
-  if (upDevice_.icon_name == NULL || !gtkTheme_->has_icon(upDevice_.icon_name))
+  if (upDevice_.icon_name == nullptr || !gtkTheme_->has_icon(upDevice_.icon_name))
     upDevice_.icon_name = (char *)NO_BATTERY.c_str();
   image_.set_from_icon_name(upDevice_.icon_name, Gtk::ICON_SIZE_INVALID);
 
@@ -304,8 +304,8 @@ void UPower::addDevice(UpDevice *device) {
     // create a new object pointing to its objectPath
     device = up_device_new();
     upDevice_output upDevice{.upDevice = device};
-    gboolean ret{up_device_set_object_path_sync(device, objectPath, NULL, NULL)};
-    if (!ret) {
+    gboolean ret{up_device_set_object_path_sync(device, objectPath, nullptr, nullptr)};
+    if (ret == 0) {
       g_object_unref(G_OBJECT(device));
       return;
     }
@@ -317,7 +317,7 @@ void UPower::addDevice(UpDevice *device) {
     }
 
     g_signal_connect(device, "notify", G_CALLBACK(deviceNotify_cb), this);
-    devices_.emplace(Devices::value_type(objectPath, upDevice));
+    devices_.emplace(objectPath, upDevice);
   }
 }
 
@@ -348,10 +348,10 @@ void UPower::resetDevices() {
 
   // Adds all devices
   GPtrArray *newDevices = up_client_get_devices2(upClient_);
-  if (newDevices != NULL)
+  if (newDevices != nullptr)
     for (guint i{0}; i < newDevices->len; ++i) {
       UpDevice *device{(UpDevice *)g_ptr_array_index(newDevices, i)};
-      if (device && G_IS_OBJECT(device)) addDevice(device);
+      if ((device != nullptr) && G_IS_OBJECT(device)) addDevice(device);
     }
 }
 
@@ -360,7 +360,7 @@ void UPower::setDisplayDevice() {
 
   if (nativePath_.empty() && model_.empty()) {
     // Unref current upDevice
-    if (upDevice_.upDevice != NULL) g_object_unref(upDevice_.upDevice);
+    if (upDevice_.upDevice != nullptr) g_object_unref(upDevice_.upDevice);
 
     upDevice_.upDevice = up_client_get_display_device(upClient_);
     getUpDeviceInfo(upDevice_);
@@ -369,10 +369,10 @@ void UPower::setDisplayDevice() {
         up_client_get_devices2(upClient_),
         [](gpointer data, gpointer user_data) {
           upDevice_output upDevice;
-          auto thisPtr{static_cast<UPower *>(user_data)};
+          auto *thisPtr{static_cast<UPower *>(user_data)};
           upDevice.upDevice = static_cast<UpDevice *>(data);
-          thisPtr->getUpDeviceInfo(upDevice);
-          upDevice_output displayDevice{NULL};
+          waybar::modules::UPower::getUpDeviceInfo(upDevice);
+          upDevice_output displayDevice{nullptr};
           if (!thisPtr->nativePath_.empty()) {
             if (upDevice.nativePath == nullptr) return;
             if (0 == std::strcmp(upDevice.nativePath, thisPtr->nativePath_.c_str())) {
@@ -385,24 +385,24 @@ void UPower::setDisplayDevice() {
             }
           }
           // Unref current upDevice
-          if (displayDevice.upDevice != NULL) g_object_unref(thisPtr->upDevice_.upDevice);
+          if (displayDevice.upDevice != nullptr) g_object_unref(thisPtr->upDevice_.upDevice);
           // Reassign new upDevice
           thisPtr->upDevice_ = displayDevice;
         },
         this);
   }
 
-  if (upDevice_.upDevice != NULL)
+  if (upDevice_.upDevice != nullptr)
     g_signal_connect(upDevice_.upDevice, "notify", G_CALLBACK(deviceNotify_cb), this);
 }
 
 void UPower::getUpDeviceInfo(upDevice_output &upDevice_) {
-  if (upDevice_.upDevice != NULL && G_IS_OBJECT(upDevice_.upDevice)) {
+  if (upDevice_.upDevice != nullptr && G_IS_OBJECT(upDevice_.upDevice)) {
     g_object_get(upDevice_.upDevice, "kind", &upDevice_.kind, "state", &upDevice_.state,
                  "percentage", &upDevice_.percentage, "icon-name", &upDevice_.icon_name,
                  "time-to-empty", &upDevice_.time_empty, "time-to-full", &upDevice_.time_full,
                  "temperature", &upDevice_.temperature, "native-path", &upDevice_.nativePath,
-                 "model", &upDevice_.model, NULL);
+                 "model", &upDevice_.model, nullptr);
     spdlog::debug(
         "UPower. getUpDeviceInfo. kind: \"{0}\". state: \"{1}\". percentage: \"{2}\". \
 icon_name: \"{3}\". time-to-empty: \"{4}\". time-to-full: \"{5}\". temperature: \"{6}\". \
@@ -413,9 +413,9 @@ native_path: \"{7}\". model: \"{8}\"",
   }
 }
 
-const Glib::ustring UPower::getText(const upDevice_output &upDevice_, const std::string &format) {
+Glib::ustring UPower::getText(const upDevice_output &upDevice_, const std::string &format) {
   Glib::ustring ret{""};
-  if (upDevice_.upDevice != NULL) {
+  if (upDevice_.upDevice != nullptr) {
     std::string timeStr{""};
     switch (upDevice_.state) {
       case UP_DEVICE_STATE_CHARGING:
@@ -475,7 +475,7 @@ bool UPower::queryTooltipCb(int x, int y, bool keyboard_tooltip,
       boxDev->add(*labelDev);
       // Construct user box
       // Set icon from icon state
-      if (pairDev.second.icon_name == NULL || !gtkTheme_->has_icon(pairDev.second.icon_name))
+      if (pairDev.second.icon_name == nullptr || !gtkTheme_->has_icon(pairDev.second.icon_name))
         pairDev.second.icon_name = (char *)NO_BATTERY.c_str();
       Gtk::Image *iconTooltip{new Gtk::Image{}};
       iconTooltip->set_from_icon_name(pairDev.second.icon_name, Gtk::ICON_SIZE_INVALID);

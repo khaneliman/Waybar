@@ -13,7 +13,7 @@ namespace waybar::modules {
 class UPower final : public AIconLabel {
  public:
   UPower(const std::string &, const Json::Value &);
-  virtual ~UPower();
+  ~UPower() override;
   auto update() -> void override;
 
  private:
@@ -30,11 +30,11 @@ class UPower final : public AIconLabel {
 
   // UPower device info
   struct upDevice_output {
-    UpDevice *upDevice{NULL};
+    UpDevice *upDevice{nullptr};
     double percentage{0.0};
     double temperature{0.0};
-    guint64 time_full{0u};
-    guint64 time_empty{0u};
+    guint64 time_full{0U};
+    guint64 time_empty{0U};
     gchar *icon_name{(char *)'\0'};
     bool upDeviceValid{false};
     UpDeviceState state;
@@ -58,18 +58,18 @@ class UPower final : public AIconLabel {
   void removeDevices();
   void resetDevices();
   void setDisplayDevice();
-  const Glib::ustring getText(const upDevice_output &upDevice_, const std::string &format);
+  static Glib::ustring getText(const upDevice_output &upDevice_, const std::string &format);
   bool queryTooltipCb(int, int, bool, const Glib::RefPtr<Gtk::Tooltip> &);
 
   // DBUS variables
   guint watcherID_;
   Glib::RefPtr<Gio::DBus::Connection> conn_;
-  guint subscrID_{0u};
+  guint subscrID_{0U};
 
   // UPower variables
   UpClient *upClient_;
   upDevice_output upDevice_;  // Device to display
-  typedef std::unordered_map<std::string, upDevice_output> Devices;
+  using Devices = std::unordered_map<std::string, upDevice_output>;
   Devices devices_;
   bool upRunning_{true};
 
@@ -88,7 +88,7 @@ class UPower final : public AIconLabel {
   static void deviceRemoved_cb(UpClient *client, const gchar *objectPath, gpointer data);
   static void deviceNotify_cb(UpDevice *device, GParamSpec *pspec, gpointer user_data);
   // UPower secondary functions
-  void getUpDeviceInfo(upDevice_output &upDevice_);
+  static void getUpDeviceInfo(upDevice_output &upDevice_);
 };
 
 }  // namespace waybar::modules
