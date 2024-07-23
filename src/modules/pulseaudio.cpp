@@ -41,7 +41,7 @@ static const std::array<std::string, 9> ports = {
     "headphone", "speaker", "hdmi", "headset", "hands-free", "portable", "car", "hifi", "phone",
 };
 
-const std::vector<std::string> waybar::modules::Pulseaudio::getPulseIcon() const {
+std::vector<std::string> waybar::modules::Pulseaudio::getPulseIcon() const {
   std::vector<std::string> res;
   auto sink_muted = backend->getSinkMuted();
   if (sink_muted) {
