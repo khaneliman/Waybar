@@ -2,7 +2,6 @@
 
 #include <fmt/format.h>
 
-#include <csignal>
 #include <string>
 
 #include "ALabel.hpp"
@@ -15,7 +14,7 @@ namespace waybar::modules {
 class Custom : public ALabel {
  public:
   Custom(const std::string&, const std::string&, const Json::Value&, const std::string&);
-  virtual ~Custom();
+  ~Custom() override;
   auto update() -> void override;
   void refresh(int /*signal*/) override;
 

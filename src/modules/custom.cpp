@@ -2,6 +2,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <cmath>
+
 #include "util/scope_guard.hpp"
 
 waybar::modules::Custom::Custom(const std::string& name, const std::string& id,
@@ -28,7 +30,7 @@ waybar::modules::Custom::Custom(const std::string& name, const std::string& id,
 waybar::modules::Custom::~Custom() {
   if (pid_ != -1) {
     killpg(pid_, SIGTERM);
-    waitpid(pid_, NULL, 0);
+    waitpid(pid_, nullptr, 0);
     pid_ = -1;
   }
 }
@@ -57,20 +59,20 @@ void waybar::modules::Custom::continuousWorker() {
   auto cmd = config_["exec"].asString();
   pid_ = -1;
   fp_ = util::command::open(cmd, pid_, output_name_);
-  if (!fp_) {
+  if (fp_ == nullptr) {
     throw std::runtime_error("Unable to open " + cmd);
   }
   thread_ = [this, cmd] {
     char* buff = nullptr;
     waybar::util::ScopeGuard buff_deleter([buff]() {
-      if (buff) {
+      if (buff != nullptr) {
         free(buff);
       }
     });
     size_t len = 0;
     if (getline(&buff, &len, fp_) == -1) {
       int exit_code = 1;
-      if (fp_) {
+      if (fp_ != nullptr) {
         exit_code = WEXITSTATUS(util::command::close(fp_, pid_));
         fp_ = nullptr;
       }
@@ -83,7 +85,7 @@ void waybar::modules::Custom::continuousWorker() {
         pid_ = -1;
         thread_.sleep_for(std::chrono::seconds(config_["restart-interval"].asUInt()));
         fp_ = util::command::open(cmd, pid_, output_name_);
-        if (!fp_) {
+        if (fp_ == nullptr) {
           throw std::runtime_error("Unable to open " + cmd);
         }
       } else {
@@ -266,7 +268,7 @@ void waybar::modules::Custom::parseOutputJson() {
       }
     }
     if (!parsed["percentage"].asString().empty() && parsed["percentage"].isNumeric()) {
-      percentage_ = (int)lround(parsed["percentage"].asFloat());
+      percentage_ = (int)std::lround(parsed["percentage"].asFloat());
     } else {
       percentage_ = 0;
     }
