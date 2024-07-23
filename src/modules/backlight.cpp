@@ -6,9 +6,8 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <chrono>
-#include <memory>
+#include <cmath>
 
 #include "util/backend_common.hpp"
 #include "util/backlight_backend.hpp"
@@ -27,7 +26,7 @@ waybar::modules::Backlight::Backlight(const std::string &id, const Json::Value &
 auto waybar::modules::Backlight::update() -> void {
   GET_BEST_DEVICE(best, backend, preferred_device_);
 
-  const auto previous_best_device = backend.get_previous_best_device();
+  const auto *const previous_best_device = backend.get_previous_best_device();
   if (best != nullptr) {
     if (previous_best_device != nullptr && *previous_best_device == *best &&
         !previous_format_.empty() && previous_format_ == format_) {
@@ -37,7 +36,7 @@ auto waybar::modules::Backlight::update() -> void {
     if (best->get_powered()) {
       event_box_.show();
       const uint8_t percent =
-          best->get_max() == 0 ? 100 : round(best->get_actual() * 100.0f / best->get_max());
+          best->get_max() == 0 ? 100 : std::round(best->get_actual() * 100.0F / best->get_max());
       std::string desc = fmt::format(fmt::runtime(format_), fmt::arg("percent", percent),
                                      fmt::arg("icon", getIcon(percent)));
       label_.set_markup(desc);
