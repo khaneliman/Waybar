@@ -5,13 +5,12 @@
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
-#include <cstdlib>
 
 namespace waybar::modules {
 
 void ondesc(void *arg, struct sioctl_desc *d, int curval) {
-  auto self = static_cast<Sndio *>(arg);
-  if (d == NULL) {
+  auto *self = static_cast<Sndio *>(arg);
+  if (d == nullptr) {
     // d is NULL when the list is done
     return;
   }
@@ -19,7 +18,7 @@ void ondesc(void *arg, struct sioctl_desc *d, int curval) {
 }
 
 void onval(void *arg, unsigned int addr, unsigned int val) {
-  auto self = static_cast<Sndio *>(arg);
+  auto *self = static_cast<Sndio *>(arg);
   self->put_val(addr, val);
 }
 
@@ -71,7 +70,7 @@ Sndio::Sndio(const std::string &id, const Json::Value &config)
     }
 
     int revents = sioctl_revents(hdl_, pfds_.data());
-    if (revents & POLLHUP) {
+    if ((revents & POLLHUP) != 0) {
       spdlog::warn("sndio disconnected!");
       sioctl_close(hdl_);
       hdl_ = nullptr;
@@ -82,7 +81,7 @@ Sndio::Sndio(const std::string &id, const Json::Value &config)
           connect_to_sndio();
         } catch (std::runtime_error const &e) {
           // avoid leaking hdl_
-          if (hdl_) {
+          if (hdl_ != nullptr) {
             sioctl_close(hdl_);
             hdl_ = nullptr;
           }

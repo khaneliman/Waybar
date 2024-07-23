@@ -12,12 +12,12 @@ namespace waybar::modules {
 class Sndio : public ALabel {
  public:
   Sndio(const std::string &, const Json::Value &);
-  virtual ~Sndio();
+  ~Sndio() override;
   auto update() -> void override;
   auto set_desc(struct sioctl_desc *, unsigned int) -> void;
   auto put_val(unsigned int, unsigned int) -> void;
-  bool handleScroll(GdkEventScroll *) override;
-  bool handleToggle(GdkEventButton *const &) override;
+  bool handleScroll(GdkEventScroll * /*unused*/) override;
+  bool handleToggle(GdkEventButton *const & /*e*/) override;
 
  private:
   auto connect_to_sndio() -> void;
