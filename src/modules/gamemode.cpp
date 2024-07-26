@@ -3,13 +3,10 @@
 #include <fmt/core.h>
 #include <spdlog/spdlog.h>
 
-#include <cstdio>
-#include <cstring>
 #include <string>
 
 #include "AModule.hpp"
 #include "giomm/dbusconnection.h"
-#include "giomm/dbusinterface.h"
 #include "giomm/dbusproxy.h"
 #include "giomm/dbuswatchname.h"
 #include "glibmm/error.h"
@@ -17,7 +14,6 @@
 #include "glibmm/variant.h"
 #include "glibmm/varianttype.h"
 #include "gtkmm/label.h"
-#include "gtkmm/tooltip.h"
 #include "util/gtk_icon.hpp"
 
 namespace waybar::modules {
@@ -91,19 +87,17 @@ Gamemode::Gamemode(const std::string& id, const Json::Value& config)
                                                          dbus_name, dbus_obj_path, dbus_interface);
   if (!gamemode_proxy) {
     throw std::runtime_error("Unable to connect to gamemode DBus!...");
-  } else {
-    gamemode_proxy->signal_signal().connect(sigc::mem_fun(*this, &Gamemode::notify_cb));
   }
+  gamemode_proxy->signal_signal().connect(sigc::mem_fun(*this, &Gamemode::notify_cb));
 
   // Connect to Login1 PrepareForSleep signal
   system_connection = Gio::DBus::Connection::get_sync(Gio::DBus::BusType::BUS_TYPE_SYSTEM);
   if (!system_connection) {
     throw std::runtime_error("Unable to connect to the SYSTEM Bus!...");
-  } else {
-    login1_id = system_connection->signal_subscribe(
-        sigc::mem_fun(*this, &Gamemode::prepareForSleep_cb), "org.freedesktop.login1",
-        "org.freedesktop.login1.Manager", "PrepareForSleep", "/org/freedesktop/login1");
   }
+  login1_id = system_connection->signal_subscribe(
+      sigc::mem_fun(*this, &Gamemode::prepareForSleep_cb), "org.freedesktop.login1",
+      "org.freedesktop.login1.Manager", "PrepareForSleep", "/org/freedesktop/login1");
 
   event_box_.signal_button_press_event().connect(sigc::mem_fun(*this, &Gamemode::handleToggle));
 }
@@ -161,7 +155,7 @@ void Gamemode::prepareForSleep_cb(const Glib::RefPtr<Gio::DBus::Connection>& con
   if (parameters.is_of_type(Glib::VariantType("(b)"))) {
     gboolean sleeping;
     g_variant_get(parameters.gobj_copy(), "(b)", &sleeping);
-    if (!sleeping) {
+    if (sleeping == 0) {
       getData();
       dp.emit();
     }

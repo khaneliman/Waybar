@@ -1,24 +1,20 @@
 #pragma once
 
-#include <iostream>
-#include <map>
 #include <string>
 
-#include "ALabel.hpp"
+#include "AModule.hpp"
 #include "giomm/dbusconnection.h"
 #include "giomm/dbusproxy.h"
-#include "glibconfig.h"
 #include "gtkmm/box.h"
 #include "gtkmm/image.h"
 #include "gtkmm/label.h"
-#include "gtkmm/overlay.h"
 
 namespace waybar::modules {
 
 class Gamemode : public AModule {
  public:
   Gamemode(const std::string &, const Json::Value &);
-  virtual ~Gamemode();
+  ~Gamemode() override;
   auto update() -> void override;
 
  private:
@@ -39,7 +35,7 @@ class Gamemode : public AModule {
                  const Glib::VariantContainerBase &arguments);
 
   void getData();
-  bool handleToggle(GdkEventButton *const &) override;
+  bool handleToggle(GdkEventButton *const & /*ev*/) override;
 
   // Config
   std::string format = DEFAULT_FORMAT;
