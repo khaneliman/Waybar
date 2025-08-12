@@ -113,7 +113,8 @@ void Workspace::insertWindow(WindowCreationPayload create_window_payload) {
   if (!create_window_payload.isEmpty(m_workspaceManager)) {
     auto repr = create_window_payload.repr(m_workspaceManager);
 
-    if (!repr.empty() || m_workspaceManager.enableTaskbar()) {
+    if ((!repr.repr_rewrite.empty() || !m_workspaceManager.hasWindowRewriteConfig()) ||
+        m_workspaceManager.enableTaskbar()) {
       auto addr = create_window_payload.getAddress();
       auto it = std::ranges::find_if(
           m_windowMap, [&addr](const auto &window) { return window.address == addr; });

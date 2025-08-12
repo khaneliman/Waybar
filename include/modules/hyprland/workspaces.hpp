@@ -59,6 +59,7 @@ class Workspaces : public AModule, public EventHandler {
   bool isWorkspaceIgnored(std::string const& workspace_name);
 
   bool windowRewriteConfigUsesTitle() const { return m_anyWindowRewriteRuleUsesTitle; }
+  bool hasWindowRewriteConfig() const { return m_hasWindowRewriteConfig; }
   const IconLoader& iconLoader() const { return m_iconLoader; }
 
  private:
@@ -163,6 +164,7 @@ class Workspaces : public AModule, public EventHandler {
   std::map<std::string, std::string> m_iconsMap;
   util::RegexCollection m_windowRewriteRules;
   bool m_anyWindowRewriteRuleUsesTitle = false;
+  bool m_hasWindowRewriteConfig = false;
   std::string m_formatWindowSeparator;
 
   bool m_withIcon;

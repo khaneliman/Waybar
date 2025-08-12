@@ -707,8 +707,11 @@ auto Workspaces::populateWindowRewriteConfig(const Json::Value &config) -> void 
   const auto &windowRewrite = config["window-rewrite"];
   if (!windowRewrite.isObject()) {
     spdlog::debug("window-rewrite is not defined or is not an object, using default rules.");
+    m_hasWindowRewriteConfig = false;
     return;
   }
+
+  m_hasWindowRewriteConfig = true;
 
   const auto &windowRewriteDefaultConfig = config["window-rewrite-default"];
   std::string windowRewriteDefault =
