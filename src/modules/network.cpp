@@ -11,11 +11,11 @@
 #include <cstring>
 #include <fstream>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <vector>
 
 #include "util/format.hpp"
+#include "util/netdev_parser.hpp"
 #ifdef WANT_RFKILL
 #include "util/rfkill.hpp"
 #endif
@@ -35,59 +35,8 @@ waybar::modules::Network::readBandwidthUsage() {
     return {};
   }
 
-  std::string line;
-  // skip the headers (first two lines)
-  std::getline(netdev, line);
-  std::getline(netdev, line);
-
-  unsigned long long receivedBytes = 0ull;
-  unsigned long long transmittedBytes = 0ull;
-  while (std::getline(netdev, line)) {
-    std::istringstream iss(line);
-
-    std::string ifacename;
-    if (!(iss >> ifacename) || ifacename.empty() || ifacename.back() != ':') {
-      continue;
-    }
-    ifacename.pop_back();  // remove trailing ':'
-    if (ifacename != ifname_) {
-      continue;
-    }
-
-    // The rest of the line consists of whitespace separated counts divided
-    // into two groups (receive and transmit). Each group has the following
-    // columns: bytes, packets, errs, drop, fifo, frame, compressed, multicast
-    //
-    // We only care about the bytes count, so we'll just ignore the 7 other
-    // columns.
-    unsigned long long r = 0ull;
-    unsigned long long t = 0ull;
-    // Read received bytes
-    if (!(iss >> r)) {
-      continue;
-    }
-    // Skip all the other columns in the received group
-    unsigned long long ignored_col = 0ull;
-    bool parsed_ok = true;
-    for (int colsToSkip = 0; colsToSkip < 7; ++colsToSkip) {
-      if (!(iss >> ignored_col)) {
-        parsed_ok = false;
-        break;
-      }
-    }
-    if (!parsed_ok) {
-      continue;
-    }
-    // Read transmit bytes
-    if (!(iss >> t)) {
-      continue;
-    }
-
-    receivedBytes += r;
-    transmittedBytes += t;
-  }
-
-  return {{receivedBytes, transmittedBytes}};
+  auto [received_bytes, transmitted_bytes] = read_netdev_bytes(netdev, ifname_);
+  return {{received_bytes, transmitted_bytes}};
 }
 
 waybar::modules::Network::Network(const std::string& id, const Json::Value& config)
