@@ -167,6 +167,7 @@ void Watcher::nameVanished(GDBusConnection* connection, const char* name, gpoint
     sn_watcher_emit_item_unregistered(watch->watcher->watcher_, tmp);
     g_free(tmp);
   }
+  gfWatchFree(watch);
 }
 
 void Watcher::updateRegisteredItems(SnWatcher* obj) {
