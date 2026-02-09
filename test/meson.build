@@ -29,3 +29,4 @@ test(
 
 subdir('utils')
 subdir('hyprland')
+subdir('sway')
