@@ -254,8 +254,7 @@ std::string IPC::getSocket1Reply(const std::string& rq) {
   }
 
   if (connect(serverSocket.get(), reinterpret_cast<sockaddr*>(&serverAddress),
-              sizeof(serverAddress)) <
-      0) {
+              sizeof(serverAddress)) < 0) {
     throw std::runtime_error("Hyprland IPC: Couldn't connect to " + socketPath + ". (3)");
   }
 
