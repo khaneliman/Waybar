@@ -58,7 +58,6 @@ void IPC::startIPC() {
   int socketfd = connectToSocket();
 
   std::thread([this, socketfd]() {
-
     spdlog::info("Niri IPC starting");
 
     auto unix_istream = Gio::UnixInputStream::create(socketfd, true);

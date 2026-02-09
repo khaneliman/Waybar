@@ -283,7 +283,9 @@ auto waybar::modules::Network::update() -> void {
   }
 
   const auto interval_seconds = std::max(interval_.count() / 1000.0, 0.001);
-  const auto rate_per_second = [interval_seconds](double value) { return value / interval_seconds; };
+  const auto rate_per_second = [interval_seconds](double value) {
+    return value / interval_seconds;
+  };
   const auto bandwidth_down_bits =
       pow_format(rate_per_second(static_cast<double>(bandwidth_down) * 8.0), "b/s");
   const auto bandwidth_up_bits =
