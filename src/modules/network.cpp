@@ -45,7 +45,9 @@ waybar::modules::Network::readBandwidthUsage() {
     std::istringstream iss(line);
 
     std::string ifacename;
-    iss >> ifacename;      // ifacename contains "eth0:"
+    if (!(iss >> ifacename) || ifacename.empty() || ifacename.back() != ':') {
+      continue;
+    }
     ifacename.pop_back();  // remove trailing ':'
     if (ifacename != ifname_) {
       continue;
@@ -60,20 +62,25 @@ waybar::modules::Network::readBandwidthUsage() {
     unsigned long long r = 0ull;
     unsigned long long t = 0ull;
     // Read received bytes
-    iss >> r;
+    if (!(iss >> r)) {
+      continue;
+    }
     // Skip all the other columns in the received group
-    for (int colsToSkip = 7; colsToSkip > 0; colsToSkip--) {
-      // skip whitespace between columns
-      while (iss.peek() == ' ') {
-        iss.ignore();
-      }
-      // skip the irrelevant column
-      while (iss.peek() != ' ') {
-        iss.ignore();
+    unsigned long long ignored_col = 0ull;
+    bool parsed_ok = true;
+    for (int colsToSkip = 0; colsToSkip < 7; ++colsToSkip) {
+      if (!(iss >> ignored_col)) {
+        parsed_ok = false;
+        break;
       }
     }
+    if (!parsed_ok) {
+      continue;
+    }
     // Read transmit bytes
-    iss >> t;
+    if (!(iss >> t)) {
+      continue;
+    }
 
     receivedBytes += r;
     transmittedBytes += t;
