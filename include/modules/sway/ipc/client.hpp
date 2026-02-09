@@ -5,6 +5,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <cstdio>
 #include <cstring>
 #include <memory>
 #include <mutex>
@@ -40,13 +41,15 @@ class Ipc {
   static inline const std::string ipc_magic_ = "i3-ipc";
   static inline const size_t ipc_header_size_ = ipc_magic_.size() + 8;
 
+  static std::string parseSocketPathOutput(const std::string& output);
+  static std::string readSocketPathFromStream(FILE* in);
   const std::string getSocketPath() const;
   int open(const std::string&) const;
   struct ipc_response send(int fd, uint32_t type, const std::string& payload = "");
   struct ipc_response recv(int fd);
 
-  int fd_;
-  int fd_event_;
+  int fd_ = -1;
+  int fd_event_ = -1;
   std::mutex mutex_;
   util::SleeperThread thread_;
 };
