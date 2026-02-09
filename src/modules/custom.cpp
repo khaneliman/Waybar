@@ -1,12 +1,12 @@
 #include "modules/custom.hpp"
 
+#include <poll.h>
 #include <spdlog/spdlog.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include <array>
 #include <cerrno>
-#include <poll.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 waybar::modules::Custom::Custom(const std::string& name, const std::string& id,
                                 const Json::Value& config, const std::string& output_name)
@@ -120,10 +120,10 @@ void waybar::modules::Custom::continuousWorker() {
       return;
     }
 
-    struct pollfd poll_fd {
-      .fd = fd,
-      .events = POLLIN | POLLHUP | POLLERR,
-      .revents = 0,
+    struct pollfd poll_fd{
+        .fd = fd,
+        .events = POLLIN | POLLHUP | POLLERR,
+        .revents = 0,
     };
 
     auto poll_rc = poll(&poll_fd, 1, 250);
