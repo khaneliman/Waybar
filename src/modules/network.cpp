@@ -651,6 +651,7 @@ int waybar::modules::Network::handleEvents(struct nl_msg* msg, void* data) {
                   struct in_addr netmask;
                   netmask.s_addr = htonl(~0 << (32 - ifa->ifa_prefixlen));
                   net->netmask_ = inet_ntop(ifa->ifa_family, &netmask, ipaddr, sizeof(ipaddr));
+                  break;
                 }
                 case AF_INET6: {
                   struct in6_addr netmask6;
@@ -661,7 +662,10 @@ int waybar::modules::Network::handleEvents(struct nl_msg* msg, void* data) {
                     netmask6.s6_addr[i] = ~0 << v;
                   }
                   net->netmask6_ = inet_ntop(ifa->ifa_family, &netmask6, ipaddr, sizeof(ipaddr));
+                  break;
                 }
+                default:
+                  break;
               }
               spdlog::debug("network: {}, new addr {}/{}", net->ifname_, net->ipaddr_, net->cidr_);
             } else {
