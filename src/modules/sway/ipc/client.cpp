@@ -3,64 +3,77 @@
 #include <fcntl.h>
 #include <spdlog/spdlog.h>
 
+#include <memory>
 #include <stdexcept>
 
 namespace waybar::modules::sway {
 
 Ipc::Ipc() {
-  const std::string& socketPath = getSocketPath();
+  const std::string socketPath = getSocketPath();
   fd_ = open(socketPath);
-  fd_event_ = open(socketPath);
+  try {
+    fd_event_ = open(socketPath);
+  } catch (...) {
+    ::close(fd_);
+    fd_ = -1;
+    throw;
+  }
 }
 
 Ipc::~Ipc() {
   thread_.stop();
 
-  if (fd_ > 0) {
+  if (fd_ >= 0) {
     // To fail the IPC header
     if (write(fd_, "close-sway-ipc", 14) == -1) {
       spdlog::error("Failed to close sway IPC");
     }
-    close(fd_);
+    ::close(fd_);
     fd_ = -1;
   }
-  if (fd_event_ > 0) {
+  if (fd_event_ >= 0) {
     if (write(fd_event_, "close-sway-ipc", 14) == -1) {
       spdlog::error("Failed to close sway IPC event handler");
     }
-    close(fd_event_);
+    ::close(fd_event_);
     fd_event_ = -1;
   }
 }
 
 void Ipc::setWorker(std::function<void()>&& func) { thread_ = func; }
 
+std::string Ipc::parseSocketPathOutput(const std::string& output) {
+  std::string path = output;
+  while (!path.empty() && (path.back() == '\n' || path.back() == '\r')) {
+    path.pop_back();
+  }
+
+  if (path.empty()) {
+    throw std::runtime_error("Socket path is empty");
+  }
+  return path;
+}
+
+std::string Ipc::readSocketPathFromStream(FILE* in) {
+  std::string str_buf;
+  char buf[512] = {0};
+  while (fgets(buf, sizeof(buf), in) != nullptr) {
+    str_buf.append(buf);
+  }
+  return parseSocketPathOutput(str_buf);
+}
+
 const std::string Ipc::getSocketPath() const {
   const char* env = getenv("SWAYSOCK");
   if (env != nullptr) {
     return std::string(env);
   }
-  std::string str;
-  {
-    std::string str_buf;
-    FILE* in;
-    char buf[512] = {0};
-    if ((in = popen("sway --get-socketpath 2>/dev/null", "r")) == nullptr) {
-      throw std::runtime_error("Failed to get socket path");
-    }
-    while (fgets(buf, sizeof(buf), in) != nullptr) {
-      str_buf.append(buf, sizeof(buf));
-    }
-    pclose(in);
-    str = str_buf;
-    if (str.empty()) {
-      throw std::runtime_error("Socket path is empty");
-    }
+  std::unique_ptr<FILE, int (*)(FILE*)> in(popen("sway --get-socketpath 2>/dev/null", "r"), pclose);
+  if (in == nullptr) {
+    throw std::runtime_error("Failed to get socket path");
   }
-  if (str.back() == '\n') {
-    str.pop_back();
-  }
-  return str;
+
+  return readSocketPathFromStream(in.get());
 }
 
 int Ipc::open(const std::string& socketPath) const {
@@ -74,8 +87,9 @@ int Ipc::open(const std::string& socketPath) const {
   addr.sun_family = AF_UNIX;
   strncpy(addr.sun_path, socketPath.c_str(), sizeof(addr.sun_path) - 1);
   addr.sun_path[sizeof(addr.sun_path) - 1] = 0;
-  int l = sizeof(struct sockaddr_un);
-  if (::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), l) == -1) {
+  const auto socket_len = static_cast<socklen_t>(sizeof(struct sockaddr_un));
+  if (::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), socket_len) == -1) {
+    ::close(fd);
     throw std::runtime_error("Unable to connect to Sway");
   }
   return fd;
