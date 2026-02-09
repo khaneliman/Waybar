@@ -2,7 +2,11 @@
 
 #include <spdlog/spdlog.h>
 
-#include "util/scope_guard.hpp"
+#include <array>
+#include <cerrno>
+#include <poll.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 waybar::modules::Custom::Custom(const std::string& name, const std::string& id,
                                 const Json::Value& config, const std::string& output_name)
@@ -38,12 +42,20 @@ waybar::modules::Custom::~Custom() {
 
 void waybar::modules::Custom::delayWorker() {
   thread_ = [this] {
-    for (int i : this->pid_children_) {
-      int status;
-      waitpid(i, &status, 0);
+    for (auto it = this->pid_children_.begin(); it != this->pid_children_.end();) {
+      int status = 0;
+      const auto pid = static_cast<pid_t>(*it);
+      const auto waited = waitpid(pid, &status, WNOHANG);
+      if (waited == 0) {
+        ++it;
+        continue;
+      }
+      if (waited == -1 && errno != ECHILD) {
+        ++it;
+        continue;
+      }
+      it = this->pid_children_.erase(it);
     }
-
-    this->pid_children_.clear();
 
     bool can_update = true;
     if (config_["exec-if"].isString()) {
@@ -71,18 +83,12 @@ void waybar::modules::Custom::continuousWorker() {
     throw std::runtime_error("Unable to open " + cmd);
   }
   thread_ = [this, cmd] {
-    char* buff = nullptr;
-    waybar::util::ScopeGuard buff_deleter([&buff]() {
-      if (buff) {
-        free(buff);
-      }
-    });
-    size_t len = 0;
-    if (getline(&buff, &len, fp_) == -1) {
-      int exit_code = 1;
+    auto handle_stopped_process = [this, &cmd](int default_exit_code) {
+      int exit_code = default_exit_code;
       if (fp_) {
         exit_code = WEXITSTATUS(util::command::close(fp_, pid_));
         fp_ = nullptr;
+        continuous_buffer_.clear();
       }
       if (exit_code != 0) {
         output_ = {exit_code, ""};
@@ -98,20 +104,65 @@ void waybar::modules::Custom::continuousWorker() {
         if (!fp_) {
           throw std::runtime_error("Unable to open " + cmd);
         }
+        continuous_buffer_.clear();
       } else {
         thread_.stop();
+      }
+    };
+
+    if (fp_ == nullptr) {
+      return;
+    }
+
+    auto fd = fileno(fp_);
+    if (fd == -1) {
+      handle_stopped_process(1);
+      return;
+    }
+
+    struct pollfd poll_fd {
+      .fd = fd,
+      .events = POLLIN | POLLHUP | POLLERR,
+      .revents = 0,
+    };
+
+    auto poll_rc = poll(&poll_fd, 1, 250);
+    if (poll_rc == 0) {
+      return;
+    }
+    if (poll_rc == -1) {
+      if (errno == EINTR) {
         return;
       }
-    } else {
-      std::string output = buff;
-
-      // Remove last newline
-      if (!output.empty() && output[output.length() - 1] == '\n') {
-        output.erase(output.length() - 1);
-      }
-      output_ = {0, output};
-      dp.emit();
+      handle_stopped_process(1);
+      return;
     }
+    if ((poll_fd.revents & (POLLIN | POLLHUP | POLLERR)) == 0) {
+      return;
+    }
+
+    std::array<char, 4096> chunk = {};
+    auto bytes_read = read(fd, chunk.data(), chunk.size());
+    if (bytes_read > 0) {
+      continuous_buffer_.append(chunk.data(), static_cast<size_t>(bytes_read));
+      for (auto new_line_pos = continuous_buffer_.find('\n'); new_line_pos != std::string::npos;
+           new_line_pos = continuous_buffer_.find('\n')) {
+        std::string output = continuous_buffer_.substr(0, new_line_pos);
+        continuous_buffer_.erase(0, new_line_pos + 1);
+        if (!output.empty() && output.back() == '\r') {
+          output.pop_back();
+        }
+        output_ = {0, output};
+        dp.emit();
+      }
+      return;
+    }
+
+    if (bytes_read == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)) {
+      return;
+    }
+
+    handle_stopped_process(1);
   };
 }
 
