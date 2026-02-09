@@ -137,15 +137,20 @@ static void handleSignalMainThread(int signum, bool& reload) {
       break;
     case SIGCHLD:
       spdlog::debug("Received SIGCHLD in signalThread");
-      if (!reap.empty()) {
-        reap_mtx.lock();
-        for (auto it = reap.begin(); it != reap.end(); ++it) {
-          if (waitpid(*it, nullptr, WNOHANG) == *it) {
-            spdlog::debug("Reaped child with PID: {}", *it);
+      {
+        std::lock_guard<std::mutex> lock(reap_mtx);
+        for (auto it = reap.begin(); it != reap.end();) {
+          auto pid = *it;
+          auto waited = waitpid(pid, nullptr, WNOHANG);
+          if (waited == pid || waited == -1) {
+            if (waited == pid) {
+              spdlog::debug("Reaped child with PID: {}", pid);
+            }
             it = reap.erase(it);
+          } else {
+            ++it;
           }
         }
-        reap_mtx.unlock();
       }
       break;
     default:
